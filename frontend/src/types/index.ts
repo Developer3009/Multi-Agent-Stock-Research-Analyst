@@ -1,9 +1,28 @@
-export type Market = 'NSE' | 'BSE'
+export type Market = 'NSE' | 'BSE' | 'US'
+
+export interface StockMover {
+  ticker: string
+  name: string
+  market: Market
+  current_price?: number
+  currency?: string
+  change?: number
+  change_pct?: number
+  signal?: string
+  category: 'bullish' | 'bearish'
+}
+
+export interface MarketMoversResponse {
+  bullish: StockMover[]
+  bearish: StockMover[]
+  last_updated?: string
+}
 
 export interface StockInfo {
   ticker: string
   name?: string
   market: Market
+  currency?: string
   sector?: string
   industry?: string
   current_price?: number

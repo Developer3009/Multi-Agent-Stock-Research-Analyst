@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
   TrendingUp, TrendingDown, Loader2, Star, StarOff, Play,
-  RefreshCw, Newspaper, ExternalLink
+  RefreshCw, Newspaper, ExternalLink, Zap, Flame, ShieldAlert, ArrowUpRight, ArrowDownRight
 } from 'lucide-react'
 import clsx from 'clsx'
 import MarketToggle from '../components/MarketToggle'
@@ -10,7 +10,7 @@ import StockChart from '../components/StockChart'
 import AgentStatusCard from '../components/AgentStatusCard'
 import ResearchReport from '../components/ResearchReport'
 import { stocksAPI, researchAPI } from '../api/client'
-import type { Market, OHLCVPoint, FullResearch, StockInfo, ResearchTask } from '../types'
+import type { Market, OHLCVPoint, FullResearch, StockInfo, ResearchTask, StockMover } from '../types'
 import { useMarket } from '../hooks/useMarket'
 
 interface NewsItem {
@@ -31,6 +31,12 @@ export default function Dashboard() {
   const [loadingInfo, setLoadingInfo] = useState(false)
   const [savedStocks, setSavedStocks] = useState<{ saved_stock_id: string; ticker: string; market: Market }[]>([])
 
+  // Market Movers State (10 Bullish & 5 Bearish stocks across NSE/BSE/US)
+  const [bullishStocks, setBullishStocks] = useState<StockMover[]>([])
+  const [bearishStocks, setBearishStocks] = useState<StockMover[]>([])
+  const [loadingMovers, setLoadingMovers] = useState(false)
+  const [moversTab, setMoversTab] = useState<'all' | 'bullish' | 'bearish'>('all')
+
   // Live Auto-Refresh State (1-minute interval)
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<string>('')
@@ -43,9 +49,18 @@ export default function Dashboard() {
   const [researchLoading, setResearchLoading] = useState(false)
   const pollRef = useRef<any>()
 
-  // Load saved stocks on mount
+  // Load saved stocks & market movers on mount
   useEffect(() => {
     stocksAPI.getSaved().then((res) => setSavedStocks(res.data)).catch(() => {})
+
+    setLoadingMovers(true)
+    stocksAPI.movers()
+      .then((res) => {
+        setBullishStocks(res.data?.bullish || [])
+        setBearishStocks(res.data?.bearish || [])
+      })
+      .catch(() => {})
+      .finally(() => setLoadingMovers(false))
   }, [])
 
   // Fetch initial stock info, chart, and live news when ticker/market/period changes
@@ -149,6 +164,13 @@ export default function Dashboard() {
     setFullResearch(null)
   }
 
+  function handleSelectMover(mover: StockMover) {
+    setMarket(mover.market)
+    setSelectedTicker(mover.ticker)
+    setResearchTask(null)
+    setFullResearch(null)
+  }
+
   async function handleStartResearch() {
     if (!selectedTicker) return
     setResearchLoading(true)
@@ -179,6 +201,8 @@ export default function Dashboard() {
     }
   }
 
+  const currencySymbol = market === 'US' || stockInfo?.currency === 'USD' ? '$' : '₹'
+
   const priceChange = stockInfo?.current_price && chartData.length > 1
     ? stockInfo.current_price - chartData[0].close
     : null
@@ -198,26 +222,28 @@ export default function Dashboard() {
 
       {/* Watchlist */}
       {savedStocks.length > 0 && (
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap items-center">
+          <span className="text-xs text-gray-500 font-semibold mr-1">Watchlist:</span>
           {savedStocks.map((s) => (
             <button
               key={s.saved_stock_id}
               onClick={() => { setMarket(s.market); handleSelect(s.ticker, s.ticker) }}
               className={clsx(
-                'text-xs px-3 py-1.5 rounded-full border transition-all',
-                s.market === 'NSE'
-                  ? 'border-green-800 text-green-400 hover:bg-green-900/30'
-                  : 'border-red-800 text-red-400 hover:bg-red-900/30'
+                'text-xs px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5',
+                s.market === 'NSE' && 'border-green-800 text-green-400 hover:bg-green-900/30',
+                s.market === 'BSE' && 'border-red-800 text-red-400 hover:bg-red-900/30',
+                s.market === 'US' && 'border-blue-800 text-blue-400 hover:bg-blue-900/30'
               )}
             >
-              {s.ticker} · {s.market}
+              <span className="font-semibold">{s.ticker}</span>
+              <span className="text-[10px] opacity-75">· {s.market}</span>
             </button>
           ))}
         </div>
       )}
 
       {/* Stock Info Panel */}
-      {selectedTicker && (
+      {selectedTicker ? (
         <>
           {loadingInfo ? (
             <div className="card flex items-center justify-center h-24">
@@ -233,17 +259,27 @@ export default function Dashboard() {
                       <p className="text-sm text-gray-400">{stockInfo.name}</p>
                     </div>
                     <span className={clsx(
-                      'text-xs px-2 py-1 rounded-full font-semibold',
-                      market === 'NSE' ? 'bg-green-900/50 text-green-400' : 'bg-red-900/50 text-red-400'
-                    )}>{market}</span>
+                      'text-xs px-2.5 py-1 rounded-full font-semibold',
+                      market === 'NSE' && 'bg-green-900/50 text-green-400 border border-green-800/50',
+                      market === 'BSE' && 'bg-red-900/50 text-red-400 border border-red-800/50',
+                      market === 'US' && 'bg-blue-900/50 text-blue-400 border border-blue-800/50'
+                    )}>
+                      {market === 'US' ? '🇺🇸 US' : market}
+                    </span>
                     <button onClick={toggleSave} className="text-gray-500 hover:text-yellow-400 transition-colors">
                       {isSaved ? <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" /> : <StarOff className="w-5 h-5" />}
+                    </button>
+                    <button
+                      onClick={() => setSelectedTicker('')}
+                      className="text-xs text-gray-400 hover:text-white underline ml-auto"
+                    >
+                      ← Back to Market Movers
                     </button>
                   </div>
 
                   <div className="mt-3 flex items-baseline gap-3">
                     <span className="text-3xl font-bold">
-                      ₹{stockInfo.current_price?.toLocaleString('en-IN') ?? '—'}
+                      {currencySymbol}{stockInfo.current_price !== undefined && stockInfo.current_price !== null ? stockInfo.current_price.toLocaleString('en-IN') : '—'}
                     </span>
                     {priceChangePct !== null && (
                       <span className={clsx(
@@ -296,11 +332,14 @@ export default function Dashboard() {
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-                    <Metric label="Market Cap" value={stockInfo.market_cap ? `₹${(stockInfo.market_cap / 1e7).toFixed(0)}Cr` : '—'} />
+                    <Metric
+                      label="Market Cap"
+                      value={stockInfo.market_cap ? `${currencySymbol}${market === 'US' ? (stockInfo.market_cap / 1e9).toFixed(1) + 'B' : (stockInfo.market_cap / 1e7).toFixed(0) + 'Cr'}` : '—'}
+                    />
                     <Metric label="P/E Ratio" value={stockInfo.pe_ratio?.toFixed(2) ?? '—'} />
                     <Metric label="P/B Ratio" value={stockInfo.pb_ratio?.toFixed(2) ?? '—'} />
-                    <Metric label="52W High" value={stockInfo['52w_high'] ? `₹${stockInfo['52w_high'].toLocaleString('en-IN')}` : '—'} />
-                    <Metric label="52W Low" value={stockInfo['52w_low'] ? `₹${stockInfo['52w_low'].toLocaleString('en-IN')}` : '—'} />
+                    <Metric label="52W High" value={stockInfo['52w_high'] ? `${currencySymbol}${stockInfo['52w_high'].toLocaleString('en-IN')}` : '—'} />
+                    <Metric label="52W Low" value={stockInfo['52w_low'] ? `${currencySymbol}${stockInfo['52w_low'].toLocaleString('en-IN')}` : '—'} />
                     <Metric label="Beta" value={stockInfo.beta?.toFixed(2) ?? '—'} />
                   </div>
                 </div>
@@ -440,17 +479,190 @@ export default function Dashboard() {
             <ResearchReport report={fullResearch.report} />
           )}
         </>
-      )}
+      ) : (
+        /* ── Landing Page (After Login): 10 Bullish & 5 Bearish Stocks (Indian & US) ── */
+        <div className="space-y-6">
+          {/* Welcome & Pulse Header */}
+          <div className="card bg-gradient-to-r from-gray-900 via-gray-900/90 to-blue-950/40 border-gray-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <Zap className="w-5 h-5 text-yellow-400" />
+                <h2 className="text-lg font-bold text-white">Daily Market Pulse & Screener</h2>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">
+                Real-time technical momentum across <span className="text-green-400 font-semibold">NSE</span>, <span className="text-red-400 font-semibold">BSE</span>, and <span className="text-blue-400 font-semibold">🇺🇸 US Markets</span>. Click any stock to view live 1m charts & run AI research.
+              </p>
+            </div>
 
-      {/* Empty state */}
-      {!selectedTicker && (
-        <div className="card text-center py-16">
-          <TrendingUp className="w-12 h-12 text-gray-700 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-400">Search for a Stock to Begin</h3>
-          <p className="text-sm text-gray-600 mt-2">
-            Enter a company name or ticker symbol above.<br />
-            Toggle between NSE and BSE markets.
-          </p>
+            {/* Movers Filter Tabs */}
+            <div className="flex items-center bg-gray-800/80 p-1 rounded-lg border border-gray-700/60 self-start sm:self-center">
+              <button
+                onClick={() => setMoversTab('all')}
+                className={clsx(
+                  'text-xs px-3 py-1 rounded font-medium transition-all',
+                  moversTab === 'all' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'
+                )}
+              >
+                All Movers
+              </button>
+              <button
+                onClick={() => setMoversTab('bullish')}
+                className={clsx(
+                  'text-xs px-3 py-1 rounded font-medium transition-all flex items-center gap-1',
+                  moversTab === 'bullish' ? 'bg-green-600 text-white' : 'text-gray-400 hover:text-white'
+                )}
+              >
+                <Flame className="w-3.5 h-3.5" /> 10 Bullish
+              </button>
+              <button
+                onClick={() => setMoversTab('bearish')}
+                className={clsx(
+                  'text-xs px-3 py-1 rounded font-medium transition-all flex items-center gap-1',
+                  moversTab === 'bearish' ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white'
+                )}
+              >
+                <ShieldAlert className="w-3.5 h-3.5" /> 5 Bearish
+              </button>
+            </div>
+          </div>
+
+          {loadingMovers ? (
+            <div className="card flex items-center justify-center py-20">
+              <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* 10 Bullish Stocks Section */}
+              {(moversTab === 'all' || moversTab === 'bullish') && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-green-900/40 border border-green-700/50 flex items-center justify-center text-green-400">
+                        <TrendingUp className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-sm text-green-400 uppercase tracking-wide flex items-center gap-2">
+                          10 Bullish Stocks <span className="text-[11px] font-normal text-gray-400">(Top Positive Momentum)</span>
+                        </h3>
+                      </div>
+                    </div>
+                    <span className="text-xs text-gray-500 font-medium">Indian & US Markets</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                    {bullishStocks.map((stock) => (
+                      <div
+                        key={`${stock.market}-${stock.ticker}`}
+                        onClick={() => handleSelectMover(stock)}
+                        className="card p-3.5 cursor-pointer hover:border-green-600/80 hover:bg-gray-800/60 transition-all border-green-900/30 flex flex-col justify-between group relative overflow-hidden"
+                      >
+                        <div className="absolute top-0 right-0 w-16 h-16 bg-green-500/5 rounded-bl-full pointer-events-none" />
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-base text-white group-hover:text-green-400 transition-colors">
+                              {stock.ticker}
+                            </span>
+                            <span className={clsx(
+                              'text-[10px] px-2 py-0.5 rounded font-semibold',
+                              stock.market === 'NSE' && 'bg-green-900/60 text-green-300 border border-green-800',
+                              stock.market === 'BSE' && 'bg-red-900/60 text-red-300 border border-red-800',
+                              stock.market === 'US' && 'bg-blue-900/60 text-blue-300 border border-blue-800'
+                            )}>
+                              {stock.market === 'US' ? '🇺🇸 US' : stock.market}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-400 truncate mt-0.5">{stock.name}</p>
+                        </div>
+
+                        <div className="mt-3 pt-2.5 border-t border-gray-800/80 flex items-baseline justify-between">
+                          <div>
+                            <span className="text-xs text-gray-500 block text-[10px]">Price</span>
+                            <span className="font-bold text-sm text-gray-200">
+                              {stock.currency === 'USD' ? '$' : '₹'}{stock.current_price?.toLocaleString('en-IN') ?? '—'}
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-xs text-green-400 font-bold flex items-center justify-end">
+                              <ArrowUpRight className="w-3.5 h-3.5" />
+                              +{stock.change_pct !== undefined ? stock.change_pct.toFixed(2) : '0.00'}%
+                            </span>
+                            <span className="text-[9px] text-gray-500 truncate block max-w-[95px] mt-0.5">
+                              {stock.signal || 'Strong Uptrend'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 5 Bearish Stocks Section */}
+              {(moversTab === 'all' || moversTab === 'bearish') && (
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-red-900/40 border border-red-700/50 flex items-center justify-center text-red-400">
+                        <TrendingDown className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-sm text-red-400 uppercase tracking-wide flex items-center gap-2">
+                          5 Bearish Stocks <span className="text-[11px] font-normal text-gray-400">(Downside & Selling Pressure)</span>
+                        </h3>
+                      </div>
+                    </div>
+                    <span className="text-xs text-gray-500 font-medium">Indian & US Markets</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                    {bearishStocks.map((stock) => (
+                      <div
+                        key={`${stock.market}-${stock.ticker}`}
+                        onClick={() => handleSelectMover(stock)}
+                        className="card p-3.5 cursor-pointer hover:border-red-600/80 hover:bg-gray-800/60 transition-all border-red-900/30 flex flex-col justify-between group relative overflow-hidden"
+                      >
+                        <div className="absolute top-0 right-0 w-16 h-16 bg-red-500/5 rounded-bl-full pointer-events-none" />
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-base text-white group-hover:text-red-400 transition-colors">
+                              {stock.ticker}
+                            </span>
+                            <span className={clsx(
+                              'text-[10px] px-2 py-0.5 rounded font-semibold',
+                              stock.market === 'NSE' && 'bg-green-900/60 text-green-300 border border-green-800',
+                              stock.market === 'BSE' && 'bg-red-900/60 text-red-300 border border-red-800',
+                              stock.market === 'US' && 'bg-blue-900/60 text-blue-300 border border-blue-800'
+                            )}>
+                              {stock.market === 'US' ? '🇺🇸 US' : stock.market}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-400 truncate mt-0.5">{stock.name}</p>
+                        </div>
+
+                        <div className="mt-3 pt-2.5 border-t border-gray-800/80 flex items-baseline justify-between">
+                          <div>
+                            <span className="text-xs text-gray-500 block text-[10px]">Price</span>
+                            <span className="font-bold text-sm text-gray-200">
+                              {stock.currency === 'USD' ? '$' : '₹'}{stock.current_price?.toLocaleString('en-IN') ?? '—'}
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-xs text-red-400 font-bold flex items-center justify-end">
+                              <ArrowDownRight className="w-3.5 h-3.5" />
+                              {stock.change_pct !== undefined ? stock.change_pct.toFixed(2) : '-0.00'}%
+                            </span>
+                            <span className="text-[9px] text-gray-500 truncate block max-w-[95px] mt-0.5">
+                              {stock.signal || 'Downside Correction'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

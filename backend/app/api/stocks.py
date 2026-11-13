@@ -5,7 +5,7 @@ from app.database import get_db
 from app.core.security import get_current_user
 from app.models.db_models import User, SavedStock
 from app.models.schemas import SavedStockCreate, SavedStockOut
-from app.services.market_data import search_stocks, get_stock_info, get_historical_prices, get_live_quote
+from app.services.market_data import search_stocks, get_stock_info, get_historical_prices, get_live_quote, get_market_movers
 from app.services.news_service import get_live_news
 from typing import List, Optional
 import pandas as pd
@@ -13,10 +13,18 @@ import pandas as pd
 router = APIRouter(prefix="/api/stocks", tags=["stocks"])
 
 
+@router.get("/movers")
+async def market_movers(
+    current_user: User = Depends(get_current_user),
+):
+    """Return top 10 bullish and top 5 bearish stocks across Indian (NSE/BSE) and US markets."""
+    return get_market_movers()
+
+
 @router.get("/search")
 async def search(
     query: str = Query(..., min_length=1),
-    market: str = Query("NSE", pattern="^(NSE|BSE)$"),
+    market: str = Query("NSE", pattern="^(NSE|BSE|US)$"),
     current_user: User = Depends(get_current_user),
 ):
     results = search_stocks(query, market)
@@ -26,7 +34,7 @@ async def search(
 @router.get("/info/{ticker}")
 async def stock_info(
     ticker: str,
-    market: str = Query("NSE", pattern="^(NSE|BSE)$"),
+    market: str = Query("NSE", pattern="^(NSE|BSE|US)$"),
     current_user: User = Depends(get_current_user),
 ):
     info = get_stock_info(ticker, market)
@@ -36,7 +44,7 @@ async def stock_info(
 @router.get("/live/{ticker}")
 async def stock_live(
     ticker: str,
-    market: str = Query("NSE", pattern="^(NSE|BSE)$"),
+    market: str = Query("NSE", pattern="^(NSE|BSE|US)$"),
     current_user: User = Depends(get_current_user),
 ):
     """Real-time 1-minute updated price quote from the internet."""
@@ -47,7 +55,7 @@ async def stock_live(
 @router.get("/news/{ticker}")
 async def stock_news(
     ticker: str,
-    market: str = Query("NSE", pattern="^(NSE|BSE)$"),
+    market: str = Query("NSE", pattern="^(NSE|BSE|US)$"),
     current_user: User = Depends(get_current_user),
 ):
     """Latest real-time financial news for stock and market, updated by the minute."""
@@ -58,7 +66,7 @@ async def stock_news(
 @router.get("/history/{ticker}")
 async def stock_history(
     ticker: str,
-    market: str = Query("NSE", pattern="^(NSE|BSE)$"),
+    market: str = Query("NSE", pattern="^(NSE|BSE|US)$"),
     period: str = Query("1y"),
     current_user: User = Depends(get_current_user),
 ):

@@ -39,6 +39,8 @@ export const authAPI = {
 
 // ── Stocks ────────────────────────────────────────────────────────────
 export const stocksAPI = {
+  movers: () =>
+    api.get('/stocks/movers'),
   search: (query: string, market: string) =>
     api.get('/stocks/search', { params: { query, market } }),
   info: (ticker: string, market: string) =>
