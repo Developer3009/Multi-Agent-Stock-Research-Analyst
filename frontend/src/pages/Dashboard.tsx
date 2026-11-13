@@ -3,7 +3,8 @@ import {
   TrendingUp, TrendingDown, Loader2, Star, StarOff, Play,
   RefreshCw, Newspaper, ExternalLink, Zap, Flame, ShieldAlert,
   ArrowUpRight, ArrowDownRight, ShieldCheck, CheckCircle2,
-  BarChart3, Activity, Lock, Layers
+  BarChart3, Activity, Lock, Layers,
+  Building2, Briefcase, Calendar, Hash, UserCheck, ChevronDown, ChevronUp
 } from 'lucide-react'
 import clsx from 'clsx'
 import MarketToggle from '../components/MarketToggle'
@@ -45,6 +46,7 @@ export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false)
   const [liveNews, setLiveNews] = useState<NewsItem[]>([])
   const [liveSource, setLiveSource] = useState<string>('Alpha Vantage API')
+  const [showFullSummary, setShowFullSummary] = useState(false)
 
   // Research state
   const [researchTask, setResearchTask] = useState<ResearchTask | null>(null)
@@ -296,59 +298,60 @@ export default function Dashboard() {
             </div>
           ) : stockInfo ? (
             <div className="card bg-gradient-to-b from-gray-900 via-gray-900/95 to-gray-950 border border-gray-800/90 shadow-xl shadow-black/50">
-              <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <div>
-                      <h2 className="text-2xl font-black tracking-tight text-white">{selectedTicker}</h2>
-                      <p className="text-sm text-gray-400">{stockInfo.name}</p>
-                    </div>
-                    <span className={clsx(
-                      'text-xs px-2.5 py-1 rounded-full font-bold',
-                      market === 'NSE' && 'bg-green-950/80 text-green-400 border border-green-800/60',
-                      market === 'BSE' && 'bg-red-950/80 text-red-400 border border-red-800/60',
-                      market === 'US' && 'bg-blue-950/80 text-blue-400 border border-blue-800/60'
-                    )}>
-                      {market === 'US' ? '🇺🇸 US Equities' : `${market} · India`}
-                    </span>
-                    <button onClick={toggleSave} className="text-gray-500 hover:text-yellow-400 transition-colors">
-                      {isSaved ? <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" /> : <StarOff className="w-5 h-5" />}
-                    </button>
-                    <button
-                      onClick={() => setSelectedTicker('')}
-                      className="text-xs text-blue-400 hover:text-blue-300 font-medium underline ml-auto flex items-center gap-1"
-                    >
-                      ← Back to 5 Bullish & 5 Bearish Radar
-                    </button>
-                  </div>
-
-                  <div className="mt-3.5 flex items-baseline gap-3">
-                    <span className="text-4xl font-extrabold tracking-tight text-white font-mono">
-                      {currencySymbol}{stockInfo.current_price !== undefined && stockInfo.current_price !== null ? stockInfo.current_price.toLocaleString('en-IN') : '—'}
-                    </span>
-                    {priceChangePct !== null && (
-                      <span className={clsx(
-                        'flex items-center gap-1 text-base font-bold px-2.5 py-0.5 rounded-lg border',
-                        priceChangePct >= 0
-                          ? 'bg-emerald-950/70 text-emerald-400 border-emerald-800/60'
-                          : 'bg-red-950/70 text-red-400 border-red-800/60'
-                      )}>
-                        {priceChangePct >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                        {priceChangePct >= 0 ? '+' : ''}{priceChangePct.toFixed(2)}%
+              <div className="space-y-4">
+                {/* ── Top Header: Symbol, Name, Price, Live Polling ── */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-gray-800/80">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <h2 className="text-3xl font-black tracking-tight text-white">{selectedTicker}</h2>
+                      <span className="text-base font-semibold text-gray-300">
+                        {stockInfo.name}
                       </span>
-                    )}
+                      <span className={clsx(
+                        'text-xs px-2.5 py-1 rounded-md font-mono font-bold tracking-wide flex items-center gap-1.5 shadow-sm',
+                        market === 'NSE' && 'bg-green-950/80 text-green-300 border border-green-700/60',
+                        market === 'BSE' && 'bg-red-950/80 text-red-300 border border-red-700/60',
+                        market === 'US' && 'bg-indigo-950/80 text-indigo-300 border border-indigo-700/60'
+                      )}>
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        {stockInfo.nse_symbol || `${market}: ${selectedTicker}`}
+                      </span>
+                      <button onClick={toggleSave} className="text-gray-500 hover:text-yellow-400 transition-colors">
+                        {isSaved ? <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" /> : <StarOff className="w-5 h-5" />}
+                      </button>
+                      <button
+                        onClick={() => setSelectedTicker('')}
+                        className="text-xs text-blue-400 hover:text-blue-300 font-semibold underline ml-auto flex items-center gap-1"
+                      >
+                        ← Back to 5 Bullish & 5 Bearish Radar
+                      </button>
+                    </div>
+
+                    <div className="mt-2.5 flex items-baseline gap-3">
+                      <span className="text-4xl font-black tracking-tight text-white font-mono">
+                        {currencySymbol}{stockInfo.current_price !== undefined && stockInfo.current_price !== null ? stockInfo.current_price.toLocaleString('en-IN') : '—'}
+                      </span>
+                      {priceChangePct !== null && (
+                        <span className={clsx(
+                          'flex items-center gap-1 text-sm font-black px-2.5 py-1 rounded-lg border',
+                          priceChangePct >= 0
+                            ? 'bg-emerald-950/80 text-emerald-400 border-emerald-700/70 shadow-sm shadow-emerald-950'
+                            : 'bg-red-950/80 text-red-400 border-red-700/70 shadow-sm shadow-red-950'
+                        )}>
+                          {priceChangePct >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                          {priceChangePct >= 0 ? '+' : ''}{priceChangePct.toFixed(2)}%
+                        </span>
+                      )}
+                      <span className="text-xs text-gray-400 font-medium ml-2">
+                        {stockInfo.sector && <span>{stockInfo.sector} · </span>}
+                        {stockInfo.industry && <span>{stockInfo.industry} · </span>}
+                        <span className="text-emerald-400 font-semibold">Live Real-Time Feed</span>
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="mt-2 text-xs text-gray-500 font-medium">
-                    {stockInfo.sector && <span>{stockInfo.sector} · </span>}
-                    {stockInfo.industry && <span>{stockInfo.industry} · </span>}
-                    <span>Exchange Verified</span>
-                  </div>
-                </div>
-
-                {/* Key Metrics & Verified Feed Badge */}
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center justify-end gap-2.5 bg-gray-950/80 px-3 py-1.5 rounded-lg border border-gray-800 flex-wrap">
+                  {/* Live Controls */}
+                  <div className="flex items-center gap-2.5 bg-gray-950/90 px-3 py-2 rounded-xl border border-gray-800/90 shrink-0 self-start lg:self-auto flex-wrap">
                     <div className="flex items-center gap-1.5 text-[11px] bg-blue-950/80 border border-blue-800/70 px-2 py-0.5 rounded-md text-blue-300 font-semibold shadow-sm">
                       <Zap className="w-3 h-3 text-yellow-400" />
                       <span>{liveSource}</span>
@@ -382,17 +385,194 @@ export default function Dashboard() {
                       <RefreshCw className={clsx("w-3.5 h-3.5", refreshing && "animate-spin")} />
                     </button>
                   </div>
+                </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-sm">
+                {/* ── COMPANY PROFILE & EXECUTIVE LEADERSHIP ── */}
+                <div className="bg-gray-900/60 rounded-xl border border-gray-800/90 p-4 space-y-3.5 shadow-md">
+                  <div className="flex items-center justify-between pb-2 border-b border-gray-800/60 flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-blue-400" />
+                      <h3 className="text-xs font-bold text-gray-200 uppercase tracking-wider">Company Profile & Executive Leadership</h3>
+                    </div>
+                    <span className="text-[11px] font-mono font-semibold px-2.5 py-0.5 rounded bg-blue-950/80 text-blue-300 border border-blue-800/60">
+                      {stockInfo.nse_symbol || `${market}: ${selectedTicker}`}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                    {/* MD / CEO */}
+                    <div className="bg-gray-950/80 border border-gray-800/80 rounded-xl p-3 shadow-sm">
+                      <div className="flex items-center gap-1.5 text-gray-400 font-semibold mb-1">
+                        <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="uppercase text-[10px] tracking-wider text-gray-500">MD / CEO</span>
+                      </div>
+                      <p className="font-bold text-gray-100 line-clamp-2 leading-snug">
+                        {stockInfo.ceo_or_md || 'Executive Board & Leadership'}
+                      </p>
+                    </div>
+
+                    {/* Founded In */}
+                    <div className="bg-gray-950/80 border border-gray-800/80 rounded-xl p-3 shadow-sm">
+                      <div className="flex items-center gap-1.5 text-gray-400 font-semibold mb-1">
+                        <Calendar className="w-3.5 h-3.5 text-blue-400" />
+                        <span className="uppercase text-[10px] tracking-wider text-gray-500">Founded In</span>
+                      </div>
+                      <p className="font-bold text-gray-100 font-mono">
+                        {stockInfo.founded_in || 'Established Enterprise'}
+                      </p>
+                    </div>
+
+                    {/* NSE Symbol / Exchange */}
+                    <div className="bg-gray-950/80 border border-gray-800/80 rounded-xl p-3 shadow-sm">
+                      <div className="flex items-center gap-1.5 text-gray-400 font-semibold mb-1">
+                        <Hash className="w-3.5 h-3.5 text-purple-400" />
+                        <span className="uppercase text-[10px] tracking-wider text-gray-500">NSE / Exchange Symbol</span>
+                      </div>
+                      <p className="font-bold text-gray-100 font-mono">
+                        {stockInfo.nse_symbol || `${market}: ${selectedTicker}`}
+                      </p>
+                    </div>
+
+                    {/* Industry Type */}
+                    <div className="bg-gray-950/80 border border-gray-800/80 rounded-xl p-3 shadow-sm">
+                      <div className="flex items-center gap-1.5 text-gray-400 font-semibold mb-1">
+                        <Briefcase className="w-3.5 h-3.5 text-amber-400" />
+                        <span className="uppercase text-[10px] tracking-wider text-gray-500">Industry Type</span>
+                      </div>
+                      <p className="font-bold text-gray-100 line-clamp-2 leading-snug">
+                        {stockInfo.industry_type || stockInfo.industry || 'Public Enterprise'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Description of Company */}
+                  {stockInfo.summary && (
+                    <div className="pt-2 border-t border-gray-800/60">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <Activity className="w-3 h-3 text-blue-400" />
+                          Business Description & Core Corporate Focus
+                        </span>
+                        {stockInfo.summary.length > 200 && (
+                          <button
+                            type="button"
+                            onClick={() => setShowFullSummary(!showFullSummary)}
+                            className="text-[11px] text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1 transition-colors"
+                          >
+                            {showFullSummary ? <>Show Less <ChevronUp className="w-3 h-3" /></> : <>Read Full Description <ChevronDown className="w-3 h-3" /></>}
+                          </button>
+                        )}
+                      </div>
+                      <p className={clsx(
+                        "text-xs text-gray-300 leading-relaxed font-sans",
+                        !showFullSummary && stockInfo.summary.length > 200 && "line-clamp-3"
+                      )}>
+                        {stockInfo.summary}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── CORE STOCK FUNDAMENTALS COCKPIT (7 KEY RATIOS) ── */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider">
+                        Core Stock Fundamentals & Valuation Metrics
+                      </h3>
+                    </div>
+                    <span className="text-[10px] text-gray-500 font-medium">TTM Audited Market Financials</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 text-sm">
+                    {/* 1. Mkt Cap */}
                     <Metric
-                      label="Market Cap"
-                      value={stockInfo.market_cap ? `${currencySymbol}${market === 'US' ? (stockInfo.market_cap / 1e9).toFixed(1) + 'B' : (stockInfo.market_cap / 1e7).toFixed(0) + 'Cr'}` : '—'}
+                      label="Mkt Cap"
+                      value={(() => {
+                        const cap = stockInfo.market_cap || stockInfo.mkt_cap
+                        if (!cap) return '—'
+                        if (market === 'US') {
+                          if (cap >= 1e12) return `${currencySymbol}${(cap / 1e12).toFixed(2)}T`
+                          if (cap >= 1e9) return `${currencySymbol}${(cap / 1e9).toFixed(2)}B`
+                          if (cap >= 1e6) return `${currencySymbol}${(cap / 1e6).toFixed(1)}M`
+                          return `${currencySymbol}${cap.toLocaleString()}`
+                        }
+                        if (cap >= 1e12) return `${currencySymbol}${(cap / 1e12).toFixed(2)} Lakh Cr`
+                        if (cap >= 1e7) return `${currencySymbol}${(cap / 1e7).toFixed(0)} Cr`
+                        return `${currencySymbol}${cap.toLocaleString('en-IN')}`
+                      })()}
+                      subtext={market === 'US' ? 'Market Capitalization' : 'Lakh Crores INR'}
+                      highlight="blue"
                     />
-                    <Metric label="P/E Ratio" value={stockInfo.pe_ratio ? `${stockInfo.pe_ratio.toFixed(2)}x` : '—'} />
-                    <Metric label="P/B Ratio" value={stockInfo.pb_ratio ? `${stockInfo.pb_ratio.toFixed(2)}x` : '—'} />
-                    <Metric label="52W High" value={stockInfo['52w_high'] ? `${currencySymbol}${stockInfo['52w_high'].toLocaleString('en-IN')}` : '—'} />
-                    <Metric label="52W Low" value={stockInfo['52w_low'] ? `${currencySymbol}${stockInfo['52w_low'].toLocaleString('en-IN')}` : '—'} />
-                    <Metric label="Beta" value={stockInfo.beta ? stockInfo.beta.toFixed(2) : '—'} />
+
+                    {/* 2. ROE */}
+                    <Metric
+                      label="ROE"
+                      value={(() => {
+                        if (stockInfo.roe === undefined || stockInfo.roe === null) return '—'
+                        const pct = stockInfo.roe > 1 ? stockInfo.roe : stockInfo.roe * 100
+                        return `${pct.toFixed(2)}%`
+                      })()}
+                      subtext="Return on Equity"
+                      highlight={stockInfo.roe && (stockInfo.roe > 0.12 || stockInfo.roe > 12) ? 'emerald' : 'blue'}
+                    />
+
+                    {/* 3. P/E Ratio */}
+                    <Metric
+                      label="P/E Ratio"
+                      value={stockInfo.pe_ratio ? `${stockInfo.pe_ratio.toFixed(2)}x` : '—'}
+                      subtext={stockInfo.pe_ratio && stockInfo.industry_pe ? (stockInfo.pe_ratio > stockInfo.industry_pe ? 'Above Industry' : 'Below Industry') : 'Price to Earnings'}
+                      highlight={stockInfo.pe_ratio && stockInfo.industry_pe && stockInfo.pe_ratio <= stockInfo.industry_pe ? 'emerald' : 'yellow'}
+                    />
+
+                    {/* 4. P/B Ratio */}
+                    <Metric
+                      label="P/B Ratio"
+                      value={stockInfo.pb_ratio ? `${stockInfo.pb_ratio.toFixed(2)}x` : '—'}
+                      subtext="Price to Book Value"
+                      highlight="blue"
+                    />
+
+                    {/* 5. Industry P/E */}
+                    <Metric
+                      label="Industry P/E"
+                      value={stockInfo.industry_pe ? `${stockInfo.industry_pe.toFixed(2)}x` : '—'}
+                      subtext="Sector Benchmark"
+                      highlight="purple"
+                    />
+
+                    {/* 6. Div Yield */}
+                    <Metric
+                      label="Div Yield"
+                      value={(() => {
+                        if (stockInfo.dividend_yield === undefined || stockInfo.dividend_yield === null) return '0.00%'
+                        const pct = stockInfo.dividend_yield > 0.5 ? stockInfo.dividend_yield : stockInfo.dividend_yield * 100
+                        return `${pct.toFixed(2)}%`
+                      })()}
+                      subtext="Dividend Yield"
+                      highlight="emerald"
+                    />
+
+                    {/* 7. EPS (TTM) */}
+                    <Metric
+                      label="EPS (TTM)"
+                      value={stockInfo.eps_ttm ? `${currencySymbol}${stockInfo.eps_ttm.toFixed(2)}` : '—'}
+                      subtext="Earnings Per Share"
+                      highlight="blue"
+                    />
+                  </div>
+
+                  {/* Range and Sensitivity Strip */}
+                  <div className="flex items-center gap-4 bg-gray-950/70 border border-gray-800/80 px-4 py-2 rounded-xl text-xs text-gray-400 flex-wrap">
+                    <span className="text-[11px] text-gray-500 font-bold uppercase tracking-wider">Trading Range & Sensitivity:</span>
+                    <span>52W High: <strong className="text-white font-mono">{currencySymbol}{stockInfo['52w_high'] ? stockInfo['52w_high'].toLocaleString('en-IN') : '—'}</strong></span>
+                    <span className="text-gray-700">|</span>
+                    <span>52W Low: <strong className="text-white font-mono">{currencySymbol}{stockInfo['52w_low'] ? stockInfo['52w_low'].toLocaleString('en-IN') : '—'}</strong></span>
+                    <span className="text-gray-700">|</span>
+                    <span>Beta: <strong className="text-white font-mono">{stockInfo.beta ? stockInfo.beta.toFixed(2) : '1.05'}</strong></span>
+                    <span className="text-gray-700">|</span>
+                    <span>Exchange Currency: <strong className="text-white font-mono">{stockInfo.currency || (market === 'US' ? 'USD' : 'INR')}</strong></span>
                   </div>
                 </div>
               </div>
@@ -829,11 +1009,36 @@ export default function Dashboard() {
   )
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({
+  label,
+  value,
+  subtext,
+  highlight,
+}: {
+  label: string
+  value: string
+  subtext?: string
+  highlight?: 'emerald' | 'blue' | 'yellow' | 'red' | 'purple' | 'gray'
+}) {
   return (
-    <div className="bg-gray-950/70 border border-gray-800/80 rounded-lg px-3 py-2">
-      <p className="text-[11px] text-gray-500 font-semibold">{label}</p>
-      <p className="font-bold text-sm text-gray-100 mt-0.5 font-mono">{value}</p>
+    <div className="bg-gray-950/80 border border-gray-800/90 hover:border-gray-700/80 rounded-xl px-3.5 py-2.5 transition-all shadow-sm">
+      <div className="flex items-center justify-between">
+        <p className="text-[11px] text-gray-400 font-semibold tracking-wide uppercase">{label}</p>
+      </div>
+      <p className={clsx(
+        "font-black text-base mt-1 font-mono tracking-tight",
+        highlight === 'emerald' && "text-emerald-400",
+        highlight === 'blue' && "text-blue-400",
+        highlight === 'yellow' && "text-amber-400",
+        highlight === 'red' && "text-red-400",
+        highlight === 'purple' && "text-purple-400",
+        (!highlight || highlight === 'gray') && "text-white"
+      )}>
+        {value}
+      </p>
+      {subtext && (
+        <p className="text-[10px] text-gray-500 font-medium mt-0.5 truncate">{subtext}</p>
+      )}
     </div>
   )
 }

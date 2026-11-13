@@ -21,11 +21,12 @@ def _build_context(state: ResearchState) -> str:
         prof = fund.get("profitability", {})
         health = fund.get("financial_health", {})
         lines.append("\n## FUNDAMENTAL DATA")
-        lines.append(f"Company: {comp.get('name')} | Sector: {comp.get('sector')} | Industry: {comp.get('industry')}")
-        lines.append(f"Market Cap: {val.get('market_cap')} | P/E: {val.get('pe_ratio')} | P/B: {val.get('pb_ratio')}")
-        lines.append(f"Revenue: {prof.get('revenue')} | Net Income: {prof.get('net_income')} | Net Margin: {prof.get('net_margin')}%")
+        lines.append(f"Company: {comp.get('name')} ({comp.get('nse_symbol')}) | Sector: {comp.get('sector')} | Industry Type: {comp.get('industry_type')}")
+        lines.append(f"Leadership: {comp.get('ceo_or_md')} | Founded: {comp.get('founded_in')}")
+        lines.append(f"Market Cap: {val.get('market_cap')} | P/E: {val.get('pe_ratio')} | Industry P/E: {val.get('industry_pe')} | P/B: {val.get('pb_ratio')} | EPS (TTM): {val.get('eps_ttm')}")
+        lines.append(f"Revenue: {prof.get('revenue')} | Net Income: {prof.get('net_income')} | Net Margin: {prof.get('net_margin')}% | ROE: {prof.get('roe')}")
+        lines.append(f"Dividend Yield: {val.get('dividend_yield')} | Beta: {val.get('beta')}")
         lines.append(f"Total Debt: {health.get('total_debt')} | Cash: {health.get('cash')} | Net Debt: {health.get('net_debt')}")
-        lines.append(f"ROE: {val.get('roe')} | Dividend Yield: {val.get('dividend_yield')} | Beta: {val.get('beta')}")
         lines.append(f"52W High: {val.get('52w_high')} | 52W Low: {val.get('52w_low')}")
         if fund.get("data_limitations"):
             lines.append(f"Limitations: {', '.join(fund['data_limitations'])}")
@@ -97,8 +98,8 @@ DATA:
 
 Write a report with these exact sections:
 1. **Executive Summary** (3-4 sentences overview)
-2. **Company Overview** (business description, sector, key facts)
-3. **Fundamental Analysis** (financial health, profitability, valuation ratios, interpretation)
+2. **Company Overview** (Executive Leadership [MD/CEO], Founded Year, Exchange Symbol [NSE/BSE/US], Industry Type, core business model, key operations)
+3. **Fundamental Analysis** (Market Capitalization, P/E Ratio vs Industry P/E, P/B Ratio, ROE, EPS [TTM], Dividend Yield, profitability, and financial health)
 4. **Technical Analysis** (price trend, indicator readings, what they historically suggest — NOT predictions)
 5. **News & Sentiment Analysis** (recent developments, sentiment, notable events)
 6. **Risk Assessment** (volatility, drawdown, identified risks, conflicts between analyses)

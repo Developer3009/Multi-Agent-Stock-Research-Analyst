@@ -44,6 +44,22 @@ class StockInfo(BaseModel):
     industry: Optional[str] = None
     currency: Optional[str] = None
     exchange: Optional[str] = None
+    current_price: Optional[float] = None
+    market_cap: Optional[float] = None
+    pe_ratio: Optional[float] = None
+    pb_ratio: Optional[float] = None
+    industry_pe: Optional[float] = None
+    dividend_yield: Optional[float] = None
+    eps_ttm: Optional[float] = None
+    roe: Optional[float] = None
+    beta: Optional[float] = None
+    high_52w: Optional[float] = None
+    low_52w: Optional[float] = None
+    ceo_or_md: Optional[str] = None
+    founded_in: Optional[str] = None
+    nse_symbol: Optional[str] = None
+    industry_type: Optional[str] = None
+    summary: Optional[str] = None
 
 
 class OHLCVPoint(BaseModel):

@@ -27,8 +27,12 @@ export interface StockInfo {
   industry?: string
   current_price?: number
   market_cap?: number
+  mkt_cap?: number
   pe_ratio?: number
   pb_ratio?: number
+  industry_pe?: number
+  dividend_yield?: number
+  eps_ttm?: number
   roe?: number
   revenue?: number
   net_income?: number
@@ -36,9 +40,14 @@ export interface StockInfo {
   cash?: number
   '52w_high'?: number
   '52w_low'?: number
-  dividend_yield?: number
   beta?: number
+  ceo_or_md?: string
+  founded_in?: string | number
+  nse_symbol?: string
+  industry_type?: string
   summary?: string
+  website?: string
+  employees?: number
   error?: string
 }
 
