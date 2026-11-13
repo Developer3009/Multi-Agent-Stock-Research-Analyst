@@ -5,8 +5,10 @@ from app.database import get_db
 from app.core.security import get_current_user
 from app.models.db_models import User, SavedStock
 from app.models.schemas import SavedStockCreate, SavedStockOut
-from app.services.market_data import search_stocks, get_stock_info, get_historical_prices
-from typing import List
+from app.services.market_data import search_stocks, get_stock_info, get_historical_prices, get_live_quote
+from app.services.news_service import get_live_news
+from typing import List, Optional
+import pandas as pd
 
 router = APIRouter(prefix="/api/stocks", tags=["stocks"])
 
@@ -31,6 +33,28 @@ async def stock_info(
     return info
 
 
+@router.get("/live/{ticker}")
+async def stock_live(
+    ticker: str,
+    market: str = Query("NSE", pattern="^(NSE|BSE)$"),
+    current_user: User = Depends(get_current_user),
+):
+    """Real-time 1-minute updated price quote from the internet."""
+    quote = get_live_quote(ticker, market)
+    return quote
+
+
+@router.get("/news/{ticker}")
+async def stock_news(
+    ticker: str,
+    market: str = Query("NSE", pattern="^(NSE|BSE)$"),
+    current_user: User = Depends(get_current_user),
+):
+    """Latest real-time financial news for stock and market, updated by the minute."""
+    articles = get_live_news(ticker)
+    return {"ticker": ticker.upper(), "market": market, "count": len(articles), "articles": articles}
+
+
 @router.get("/history/{ticker}")
 async def stock_history(
     ticker: str,
@@ -45,12 +69,12 @@ async def stock_history(
     chart_df = df.tail(500).reset_index()
     data = [
         {
-            "date": str(row["Date"])[:10],
+            "date": str(row["Date"])[:16] if period in ("1d", "5d") else str(row["Date"])[:10],
             "open": round(float(row["Open"]), 2),
             "high": round(float(row["High"]), 2),
             "low": round(float(row["Low"]), 2),
             "close": round(float(row["Close"]), 2),
-            "volume": int(row["Volume"]),
+            "volume": int(row["Volume"]) if not pd.isna(row["Volume"]) else 0,
         }
         for _, row in chart_df.iterrows()
     ]

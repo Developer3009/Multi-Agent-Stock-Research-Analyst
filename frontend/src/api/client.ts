@@ -43,6 +43,10 @@ export const stocksAPI = {
     api.get('/stocks/search', { params: { query, market } }),
   info: (ticker: string, market: string) =>
     api.get(`/stocks/info/${ticker}`, { params: { market } }),
+  live: (ticker: string, market: string) =>
+    api.get(`/stocks/live/${ticker}`, { params: { market } }),
+  news: (ticker: string, market: string) =>
+    api.get(`/stocks/news/${ticker}`, { params: { market } }),
   history: (ticker: string, market: string, period: string) =>
     api.get(`/stocks/history/${ticker}`, { params: { market, period } }),
   saveStock: (ticker: string, market: string) =>

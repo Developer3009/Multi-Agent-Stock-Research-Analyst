@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
-  TrendingUp, TrendingDown, Loader2, Star, StarOff, Play
+  TrendingUp, TrendingDown, Loader2, Star, StarOff, Play,
+  RefreshCw, Newspaper, ExternalLink
 } from 'lucide-react'
 import clsx from 'clsx'
 import MarketToggle from '../components/MarketToggle'
@@ -12,6 +13,15 @@ import { stocksAPI, researchAPI } from '../api/client'
 import type { Market, OHLCVPoint, FullResearch, StockInfo, ResearchTask } from '../types'
 import { useMarket } from '../hooks/useMarket'
 
+interface NewsItem {
+  title: string
+  url: string
+  summary: string
+  published_at?: string
+  source: string
+  sentiment?: 'positive' | 'negative' | 'neutral'
+}
+
 export default function Dashboard() {
   const { market, setMarket } = useMarket('NSE')
   const [selectedTicker, setSelectedTicker] = useState('')
@@ -20,6 +30,12 @@ export default function Dashboard() {
   const [period, setPeriod] = useState('1y')
   const [loadingInfo, setLoadingInfo] = useState(false)
   const [savedStocks, setSavedStocks] = useState<{ saved_stock_id: string; ticker: string; market: Market }[]>([])
+
+  // Live Auto-Refresh State (1-minute interval)
+  const [autoRefresh, setAutoRefresh] = useState(true)
+  const [lastUpdated, setLastUpdated] = useState<string>('')
+  const [refreshing, setRefreshing] = useState(false)
+  const [liveNews, setLiveNews] = useState<NewsItem[]>([])
 
   // Research state
   const [researchTask, setResearchTask] = useState<ResearchTask | null>(null)
@@ -32,23 +48,73 @@ export default function Dashboard() {
     stocksAPI.getSaved().then((res) => setSavedStocks(res.data)).catch(() => {})
   }, [])
 
-  // Load stock info and chart when ticker/market/period changes
+  // Fetch initial stock info, chart, and live news when ticker/market/period changes
   useEffect(() => {
     if (!selectedTicker) return
     setLoadingInfo(true)
     setStockInfo(null)
     setChartData([])
+    setLiveNews([])
+
     Promise.all([
       stocksAPI.info(selectedTicker, market),
       stocksAPI.history(selectedTicker, market, period),
+      stocksAPI.news(selectedTicker, market).catch(() => ({ data: { articles: [] } })),
     ])
-      .then(([infoRes, histRes]) => {
+      .then(([infoRes, histRes, newsRes]) => {
         setStockInfo(infoRes.data)
         setChartData(histRes.data.data || [])
+        setLiveNews(newsRes.data?.articles || [])
+        setLastUpdated(new Date().toLocaleTimeString('en-IN'))
       })
       .catch(() => {})
       .finally(() => setLoadingInfo(false))
   }, [selectedTicker, market, period])
+
+  // Function to refresh live data from internet
+  const refreshLiveData = useCallback(async () => {
+    if (!selectedTicker) return
+    setRefreshing(true)
+    try {
+      const [liveRes, newsRes, histRes] = await Promise.all([
+        stocksAPI.live(selectedTicker, market).catch(() => null),
+        stocksAPI.news(selectedTicker, market).catch(() => null),
+        period === '1d' ? stocksAPI.history(selectedTicker, market, '1d').catch(() => null) : Promise.resolve(null),
+      ])
+
+      if (liveRes?.data?.current_price) {
+        setStockInfo((prev) => prev ? {
+          ...prev,
+          current_price: liveRes.data.current_price,
+          '52w_high': liveRes.data.day_high || prev['52w_high'],
+          '52w_low': liveRes.data.day_low || prev['52w_low'],
+        } : prev)
+      }
+
+      if (newsRes?.data?.articles?.length) {
+        setLiveNews(newsRes.data.articles)
+      }
+
+      if (histRes?.data?.data?.length) {
+        setChartData(histRes.data.data)
+      }
+
+      setLastUpdated(new Date().toLocaleTimeString('en-IN'))
+    } finally {
+      setRefreshing(false)
+    }
+  }, [selectedTicker, market, period])
+
+  // Periodic 60-second (1-minute) interval for live updates from internet
+  useEffect(() => {
+    if (!selectedTicker || !autoRefresh) return
+
+    const interval = setInterval(() => {
+      refreshLiveData()
+    }, 60000)
+
+    return () => clearInterval(interval)
+  }, [selectedTicker, autoRefresh, refreshLiveData])
 
   // Poll research task status
   useEffect(() => {
@@ -196,14 +262,47 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Key Metrics */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-                  <Metric label="Market Cap" value={stockInfo.market_cap ? `₹${(stockInfo.market_cap / 1e7).toFixed(0)}Cr` : '—'} />
-                  <Metric label="P/E Ratio" value={stockInfo.pe_ratio?.toFixed(2) ?? '—'} />
-                  <Metric label="P/B Ratio" value={stockInfo.pb_ratio?.toFixed(2) ?? '—'} />
-                  <Metric label="52W High" value={stockInfo['52w_high'] ? `₹${stockInfo['52w_high'].toLocaleString('en-IN')}` : '—'} />
-                  <Metric label="52W Low" value={stockInfo['52w_low'] ? `₹${stockInfo['52w_low'].toLocaleString('en-IN')}` : '—'} />
-                  <Metric label="Beta" value={stockInfo.beta?.toFixed(2) ?? '—'} />
+                {/* Key Metrics & Live Badge */}
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-end gap-3 bg-gray-900/50 px-3 py-1.5 rounded-lg border border-gray-800">
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className={clsx("w-2 h-2 rounded-full", autoRefresh ? "bg-green-400 animate-ping" : "bg-gray-600")} />
+                      <span className="text-gray-400 font-medium">
+                        {autoRefresh ? "Live 1m" : "Paused"}
+                      </span>
+                      {lastUpdated && (
+                        <span className="text-gray-500 text-[11px]">· {lastUpdated}</span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAutoRefresh(!autoRefresh)}
+                      className={clsx(
+                        "text-[10px] px-2 py-0.5 rounded font-medium border transition-colors",
+                        autoRefresh ? "border-green-700 text-green-400" : "border-gray-700 text-gray-500"
+                      )}
+                    >
+                      {autoRefresh ? "Auto On" : "Auto Off"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={refreshLiveData}
+                      disabled={refreshing}
+                      className="p-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors"
+                      title="Refresh live data now"
+                    >
+                      <RefreshCw className={clsx("w-3.5 h-3.5", refreshing && "animate-spin")} />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+                    <Metric label="Market Cap" value={stockInfo.market_cap ? `₹${(stockInfo.market_cap / 1e7).toFixed(0)}Cr` : '—'} />
+                    <Metric label="P/E Ratio" value={stockInfo.pe_ratio?.toFixed(2) ?? '—'} />
+                    <Metric label="P/B Ratio" value={stockInfo.pb_ratio?.toFixed(2) ?? '—'} />
+                    <Metric label="52W High" value={stockInfo['52w_high'] ? `₹${stockInfo['52w_high'].toLocaleString('en-IN')}` : '—'} />
+                    <Metric label="52W Low" value={stockInfo['52w_low'] ? `₹${stockInfo['52w_low'].toLocaleString('en-IN')}` : '—'} />
+                    <Metric label="Beta" value={stockInfo.beta?.toFixed(2) ?? '—'} />
+                  </div>
                 </div>
               </div>
             </div>
@@ -213,18 +312,18 @@ export default function Dashboard() {
           {chartData.length > 0 && (
             <div className="card p-0 overflow-hidden">
               <div className="flex items-center gap-2 px-4 pt-4">
-                {['1mo', '3mo', '6mo', '1y', '2y', '5y'].map((p) => (
+                {['1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y'].map((p) => (
                   <button
                     key={p}
                     onClick={() => setPeriod(p)}
                     className={clsx(
-                      'text-xs px-3 py-1 rounded-full transition-colors',
+                      'text-xs px-3 py-1 rounded-full transition-colors font-medium',
                       period === p
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-blue-600 text-white shadow-sm'
                         : 'bg-gray-800 text-gray-400 hover:text-white'
                     )}
                   >
-                    {p}
+                    {p === '1d' ? '1D (1m)' : p.toUpperCase()}
                   </button>
                 ))}
               </div>
@@ -245,6 +344,53 @@ export default function Dashboard() {
                   }
                 })()}
               />
+            </div>
+          )}
+
+          {/* Live Breaking News Feed */}
+          {liveNews.length > 0 && (
+            <div className="card space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Newspaper className="w-4 h-4 text-blue-400" />
+                  <h3 className="font-semibold text-sm">Live Market News & Sentiment</h3>
+                </div>
+                <span className="text-xs text-gray-500">Live RSS Feeds · Updated by minute</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {liveNews.slice(0, 4).map((item, idx) => (
+                  <a
+                    key={idx}
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-3 bg-gray-800/40 hover:bg-gray-800 rounded-lg border border-gray-700/50 transition-colors flex flex-col justify-between group"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between text-xs text-gray-400 mb-1.5">
+                        <span className="font-medium text-gray-300">{item.source}</span>
+                        <span className={clsx(
+                          "text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase",
+                          item.sentiment === 'positive' && "bg-green-900/60 text-green-300 border border-green-700/50",
+                          item.sentiment === 'negative' && "bg-red-900/60 text-red-300 border border-red-700/50",
+                          item.sentiment === 'neutral' && "bg-gray-700/60 text-gray-300 border border-gray-600/50"
+                        )}>
+                          {item.sentiment || 'neutral'}
+                        </span>
+                      </div>
+                      <h4 className="text-xs font-semibold text-gray-200 group-hover:text-blue-400 transition-colors line-clamp-2">
+                        {item.title}
+                      </h4>
+                    </div>
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-700/30 text-[10px] text-gray-500">
+                      <span>{item.published_at ? new Date(item.published_at).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }) : 'Recent'}</span>
+                      <span className="flex items-center gap-1 text-blue-400 group-hover:underline">
+                        Read source <ExternalLink className="w-2.5 h-2.5" />
+                      </span>
+                    </div>
+                  </a>
+                ))}
+              </div>
             </div>
           )}
 

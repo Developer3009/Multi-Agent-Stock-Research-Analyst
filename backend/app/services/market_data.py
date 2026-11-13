@@ -74,18 +74,23 @@ def search_stocks(query: str, market: str = "NSE") -> List[Dict[str, Any]]:
     return matches[:10]
 
 
+_quote_cache: Dict[str, Dict[str, Any]] = {}
+
+
 def _fetch_chart_data(yf_ticker: str, period: str = "1y") -> Optional[Dict[str, Any]]:
     """Fetch raw chart data from Yahoo Finance API with browser impersonation."""
     range_map = {
-        "1mo": "1mo",
-        "3mo": "3mo",
-        "6mo": "6mo",
-        "1y": "1y",
-        "2y": "2y",
-        "5y": "5y",
+        "1d": ("1d", "1m"),
+        "5d": ("5d", "5m"),
+        "1mo": ("1mo", "1d"),
+        "3mo": ("3mo", "1d"),
+        "6mo": ("6mo", "1d"),
+        "1y": ("1y", "1d"),
+        "2y": ("2y", "1d"),
+        "5y": ("5y", "1wk"),
     }
-    rng = range_map.get(period, "1y")
-    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{yf_ticker}?range={rng}&interval=1d"
+    rng, interval = range_map.get(period, ("1y", "1d"))
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{yf_ticker}?range={rng}&interval={interval}"
     try:
         resp = cffi_requests.get(url, impersonate="chrome", timeout=10)
         if resp.status_code == 200:
@@ -95,6 +100,79 @@ def _fetch_chart_data(yf_ticker: str, period: str = "1y") -> Optional[Dict[str, 
     except Exception:
         pass
     return None
+
+
+def get_live_quote(ticker: str, market: str) -> Dict[str, Any]:
+    """
+    Fetch real-time 1-minute updated price quote from Yahoo Finance.
+    Caches for 45s so client polling every 60s always stays synchronized with live data.
+    """
+    yf_ticker = get_yf_ticker(ticker, market)
+    now = datetime.utcnow().timestamp()
+
+    if yf_ticker in _quote_cache:
+        cached = _quote_cache[yf_ticker]
+        if now - cached.get("_cached_at", 0) < 45:
+            return cached["data"]
+
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{yf_ticker}?range=1d&interval=1m"
+    try:
+        resp = cffi_requests.get(url, impersonate="chrome", timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            if "chart" in data and "result" in data["chart"] and data["chart"]["result"]:
+                meta = data["chart"]["result"][0]["meta"]
+                current_price = meta.get("regularMarketPrice")
+                prev_close = meta.get("chartPreviousClose") or meta.get("previousClose") or current_price
+                change = round(current_price - prev_close, 2) if current_price and prev_close else 0.0
+                change_pct = round((change / prev_close) * 100, 2) if prev_close else 0.0
+
+                matched_name = next(
+                    (s["name"] for s in POPULAR_INDIAN_STOCKS if s["ticker"] == ticker.upper()),
+                    meta.get("shortName") or meta.get("symbol") or ticker.upper()
+                )
+
+                quote_data = {
+                    "ticker": ticker.upper(),
+                    "market": market.upper(),
+                    "yf_ticker": yf_ticker,
+                    "name": matched_name,
+                    "current_price": current_price,
+                    "previous_close": prev_close,
+                    "change": change,
+                    "change_pct": change_pct,
+                    "day_high": meta.get("regularMarketDayHigh"),
+                    "day_low": meta.get("regularMarketDayLow"),
+                    "volume": meta.get("regularMarketVolume"),
+                    "market_time": meta.get("regularMarketTime"),
+                    "currency": meta.get("currency", "INR"),
+                    "exchange": meta.get("exchangeName", market),
+                    "last_updated": datetime.utcnow().strftime("%H:%M:%S UTC"),
+                    "status": "live",
+                }
+                _quote_cache[yf_ticker] = {"data": quote_data, "_cached_at": now}
+                return quote_data
+    except Exception:
+        pass
+
+    info = get_stock_info(ticker, market) or {}
+    fallback_data = {
+        "ticker": ticker.upper(),
+        "market": market.upper(),
+        "yf_ticker": yf_ticker,
+        "name": info.get("name", ticker.upper()),
+        "current_price": info.get("current_price"),
+        "previous_close": info.get("current_price"),
+        "change": 0.0,
+        "change_pct": 0.0,
+        "day_high": info.get("52w_high"),
+        "day_low": info.get("52w_low"),
+        "volume": None,
+        "currency": "INR",
+        "last_updated": datetime.utcnow().strftime("%H:%M:%S UTC"),
+        "status": "cached",
+    }
+    return fallback_data
 
 
 def get_stock_info(ticker: str, market: str) -> Optional[Dict[str, Any]]:

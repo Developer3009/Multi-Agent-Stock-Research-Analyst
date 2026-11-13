@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import Plot from 'react-plotly.js'
+import clsx from 'clsx'
 import type { OHLCVPoint } from '../types'
 
 interface SMAData {
@@ -17,6 +18,8 @@ interface Props {
 }
 
 export default function StockChart({ data, ticker, market, height = 400, sma }: Props) {
+  const [chartType, setChartType] = useState<'candle' | 'line'>('candle')
+
   const { dates, opens, highs, lows, closes, volumes } = useMemo(() => ({
     dates: data.map((d) => d.date),
     opens: data.map((d) => d.open),
@@ -36,6 +39,17 @@ export default function StockChart({ data, ticker, market, height = 400, sma }: 
     name: `${ticker} (${market})`,
     increasing: { line: { color: '#22c55e' } },
     decreasing: { line: { color: '#ef4444' } },
+  }
+
+  const lineTrace: Plotly.Data = {
+    type: 'scatter',
+    mode: 'lines',
+    x: dates,
+    y: closes,
+    name: `${ticker} Price`,
+    line: { color: '#38bdf8', width: 2 },
+    fill: 'tozeroy',
+    fillcolor: 'rgba(56, 189, 248, 0.08)',
   }
 
   const volumeBar: Plotly.Data = {
@@ -107,13 +121,45 @@ export default function StockChart({ data, ticker, market, height = 400, sma }: 
     hovermode: 'x unified',
   }
 
+  const primarySeries = chartType === 'candle' ? candlestick : lineTrace
+
   return (
-    <Plot
-      data={[candlestick, ...smaTraces, volumeBar]}
-      layout={layout}
-      config={{ responsive: true, displayModeBar: false }}
-      style={{ width: '100%', height }}
-      useResizeHandler
-    />
+    <div className="flex flex-col w-full">
+      <div className="flex items-center justify-end px-4 py-2 bg-gray-900/40 border-b border-gray-800/80">
+        <div className="flex items-center bg-gray-800/90 p-0.5 rounded-lg border border-gray-700/60">
+          <button
+            type="button"
+            onClick={() => setChartType('candle')}
+            className={clsx(
+              'text-xs px-2.5 py-1 rounded font-medium transition-all flex items-center gap-1',
+              chartType === 'candle'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-gray-400 hover:text-white'
+            )}
+          >
+            <span>📊</span> Candlestick
+          </button>
+          <button
+            type="button"
+            onClick={() => setChartType('line')}
+            className={clsx(
+              'text-xs px-2.5 py-1 rounded font-medium transition-all flex items-center gap-1',
+              chartType === 'line'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-gray-400 hover:text-white'
+            )}
+          >
+            <span>📈</span> Line
+          </button>
+        </div>
+      </div>
+      <Plot
+        data={[primarySeries, ...smaTraces, volumeBar]}
+        layout={layout}
+        config={{ responsive: true, displayModeBar: false }}
+        style={{ width: '100%', height }}
+        useResizeHandler
+      />
+    </div>
   )
 }
