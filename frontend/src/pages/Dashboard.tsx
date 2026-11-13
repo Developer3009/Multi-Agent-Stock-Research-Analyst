@@ -47,6 +47,9 @@ export default function Dashboard() {
   const [liveNews, setLiveNews] = useState<NewsItem[]>([])
   const [liveSource, setLiveSource] = useState<string>('Alpha Vantage API')
   const [showFullSummary, setShowFullSummary] = useState(false)
+  const [newsSentimentFilter, setNewsSentimentFilter] = useState<'all' | 'positive' | 'negative' | 'neutral'>('all')
+  const [showAllNews, setShowAllNews] = useState(false)
+  const [loadingNews, setLoadingNews] = useState(false)
 
   // Research state
   const [researchTask, setResearchTask] = useState<ResearchTask | null>(null)
@@ -72,9 +75,12 @@ export default function Dashboard() {
   useEffect(() => {
     if (!selectedTicker) return
     setLoadingInfo(true)
+    setLoadingNews(true)
     setStockInfo(null)
     setChartData([])
     setLiveNews([])
+    setShowAllNews(false)
+    setNewsSentimentFilter('all')
 
     Promise.all([
       stocksAPI.info(selectedTicker, market),
@@ -83,12 +89,15 @@ export default function Dashboard() {
     ])
       .then(([infoRes, histRes, newsRes]) => {
         setStockInfo(infoRes.data)
-        setChartData(histRes.data.data || [])
+        setChartData(histRes.data?.data || [])
         setLiveNews(newsRes.data?.articles || [])
         setLastUpdated(new Date().toLocaleTimeString('en-IN'))
       })
       .catch(() => {})
-      .finally(() => setLoadingInfo(false))
+      .finally(() => {
+        setLoadingInfo(false)
+        setLoadingNews(false)
+      })
   }, [selectedTicker, market, period])
 
   // Function to refresh live data from internet
@@ -619,54 +628,159 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Live Breaking News Feed */}
-          {liveNews.length > 0 && (
-            <div className="card space-y-3.5 border-gray-800/90">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-md bg-blue-900/40 border border-blue-700/50 flex items-center justify-center text-blue-400">
-                    <Newspaper className="w-3.5 h-3.5" />
-                  </div>
-                  <h3 className="font-bold text-sm text-gray-200">Live Financial News & Sentiment Intelligence</h3>
-                </div>
-                <span className="text-[11px] text-gray-500 font-medium">Real-time RSS Wire · 1m Updates</span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {liveNews.slice(0, 4).map((item, idx) => (
-                  <a
-                    key={idx}
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-3.5 bg-gray-900/60 hover:bg-gray-850 rounded-xl border border-gray-800 hover:border-gray-700 transition-all flex flex-col justify-between group shadow-sm"
-                  >
+          {/* ── LIVE STOCK-SPECIFIC NEWS & SENTIMENT INTELLIGENCE ── */}
+          {(() => {
+            const posCount = liveNews.filter((n) => n.sentiment === 'positive').length
+            const negCount = liveNews.filter((n) => n.sentiment === 'negative').length
+            const neuCount = liveNews.filter((n) => n.sentiment === 'neutral' || !n.sentiment).length
+            const filteredNews = liveNews.filter((n) => {
+              if (newsSentimentFilter === 'all') return true
+              if (newsSentimentFilter === 'neutral') return n.sentiment === 'neutral' || !n.sentiment
+              return n.sentiment === newsSentimentFilter
+            })
+            const displayedNews = showAllNews ? filteredNews : filteredNews.slice(0, 6)
+
+            return (
+              <div className="card space-y-4 border border-gray-800/90 shadow-xl bg-gradient-to-b from-gray-900 to-gray-950">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-800/80">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-blue-950/80 border border-blue-800/60 flex items-center justify-center text-blue-400 shadow-sm">
+                      <Newspaper className="w-4 h-4 text-blue-400" />
+                    </div>
                     <div>
-                      <div className="flex items-center justify-between text-xs text-gray-400 mb-2">
-                        <span className="font-semibold text-gray-300">{item.source}</span>
-                        <span className={clsx(
-                          "text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider",
-                          item.sentiment === 'positive' && "bg-emerald-950/80 text-emerald-400 border border-emerald-800/60",
-                          item.sentiment === 'negative' && "bg-red-950/80 text-red-400 border border-red-800/60",
-                          item.sentiment === 'neutral' && "bg-gray-800 text-gray-400 border border-gray-700"
-                        )}>
-                          {item.sentiment || 'neutral'}
-                        </span>
+                      <h3 className="font-extrabold text-sm text-gray-100 flex items-center gap-2">
+                        <span>Live News & Intelligence:</span>
+                        <span className="text-blue-400 font-mono">{selectedTicker}</span>
+                        {stockInfo?.name && <span className="text-gray-400 font-normal text-xs hidden sm:inline">({stockInfo.name})</span>}
+                      </h3>
+                      <p className="text-[11px] text-gray-500 font-medium">Real-time wire feed aggregated specifically for {selectedTicker} · 1m Auto-Sync</p>
+                    </div>
+                  </div>
+
+                  {/* Sentiment Filter Pills */}
+                  {liveNews.length > 0 && (
+                    <div className="flex items-center gap-1.5 self-start sm:self-auto flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => setNewsSentimentFilter('all')}
+                        className={clsx(
+                          "text-[11px] px-2.5 py-1 rounded-md font-bold transition-all",
+                          newsSentimentFilter === 'all'
+                            ? "bg-blue-600 text-white shadow-sm"
+                            : "bg-gray-800/80 text-gray-400 hover:text-white"
+                        )}
+                      >
+                        All ({liveNews.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewsSentimentFilter('positive')}
+                        className={clsx(
+                          "text-[11px] px-2.5 py-1 rounded-md font-bold transition-all",
+                          newsSentimentFilter === 'positive'
+                            ? "bg-emerald-600 text-white shadow-sm"
+                            : "bg-emerald-950/50 text-emerald-400 hover:bg-emerald-950/80 border border-emerald-800/40"
+                        )}
+                      >
+                        🟢 Positive ({posCount})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewsSentimentFilter('negative')}
+                        className={clsx(
+                          "text-[11px] px-2.5 py-1 rounded-md font-bold transition-all",
+                          newsSentimentFilter === 'negative'
+                            ? "bg-red-600 text-white shadow-sm"
+                            : "bg-red-950/50 text-red-400 hover:bg-red-950/80 border border-red-800/40"
+                        )}
+                      >
+                        🔴 Negative ({negCount})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewsSentimentFilter('neutral')}
+                        className={clsx(
+                          "text-[11px] px-2.5 py-1 rounded-md font-bold transition-all",
+                          newsSentimentFilter === 'neutral'
+                            ? "bg-gray-600 text-white shadow-sm"
+                            : "bg-gray-800/80 text-gray-400 hover:text-white"
+                        )}
+                      >
+                        ⚪ Neutral ({neuCount})
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {loadingNews ? (
+                  <div className="py-12 flex flex-col items-center justify-center space-y-2.5 text-center">
+                    <Loader2 className="w-7 h-7 text-blue-400 animate-spin" />
+                    <p className="text-xs font-semibold text-gray-300">Scanning real-time financial wire specifically for {selectedTicker}...</p>
+                    <p className="text-[11px] text-gray-500">Querying Google News RSS & official exchange wires</p>
+                  </div>
+                ) : liveNews.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-gray-500 bg-gray-950/60 rounded-xl border border-gray-800/60">
+                    <p className="font-semibold text-gray-400">No breaking headlines found for {selectedTicker} in the last hour.</p>
+                    <p className="text-[11px] text-gray-600 mt-1">Live background polling active. New market filings will appear automatically.</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {displayedNews.map((item, idx) => (
+                        <a
+                          key={idx}
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-3.5 bg-gray-900/70 hover:bg-gray-850 rounded-xl border border-gray-800/90 hover:border-gray-700 transition-all flex flex-col justify-between group shadow-sm hover:shadow-md"
+                        >
+                          <div>
+                            <div className="flex items-center justify-between text-xs text-gray-400 mb-2 gap-2">
+                              <span className="font-bold text-gray-300 truncate max-w-[65%]">{item.source}</span>
+                              <span className={clsx(
+                                "text-[10px] px-2 py-0.5 rounded-md font-extrabold uppercase tracking-wider shrink-0",
+                                item.sentiment === 'positive' && "bg-emerald-950/90 text-emerald-300 border border-emerald-700/70",
+                                item.sentiment === 'negative' && "bg-red-950/90 text-red-300 border border-red-700/70",
+                                item.sentiment === 'neutral' && "bg-gray-800 text-gray-300 border border-gray-700"
+                              )}>
+                                {item.sentiment || 'neutral'}
+                              </span>
+                            </div>
+                            <h4 className="text-xs font-bold text-gray-100 group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug">
+                              {item.title}
+                            </h4>
+                            {item.summary && (
+                              <p className="text-[11px] text-gray-400 line-clamp-2 mt-1.5 leading-relaxed font-sans">
+                                {item.summary}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-800/70 text-[10px] text-gray-500">
+                            <span>{formatRelativeTime(item.published_at)}</span>
+                            <span className="flex items-center gap-1 text-blue-400 font-semibold group-hover:underline">
+                              Read Story <ExternalLink className="w-2.5 h-2.5" />
+                            </span>
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+
+                    {filteredNews.length > 6 && (
+                      <div className="flex justify-center pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowAllNews(!showAllNews)}
+                          className="text-xs font-semibold px-4 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition-colors flex items-center gap-1.5"
+                        >
+                          {showAllNews ? <>Show Fewer News <ChevronUp className="w-3.5 h-3.5" /></> : <>View All {filteredNews.length} News Articles for {selectedTicker} <ChevronDown className="w-3.5 h-3.5" /></>}
+                        </button>
                       </div>
-                      <h4 className="text-xs font-semibold text-gray-200 group-hover:text-blue-400 transition-colors line-clamp-2 leading-relaxed">
-                        {item.title}
-                      </h4>
-                    </div>
-                    <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-gray-800 text-[10px] text-gray-500">
-                      <span>{item.published_at ? new Date(item.published_at).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }) : 'Verified Wire'}</span>
-                      <span className="flex items-center gap-1 text-blue-400 font-semibold group-hover:underline">
-                        Source article <ExternalLink className="w-2.5 h-2.5" />
-                      </span>
-                    </div>
-                  </a>
-                ))}
+                    )}
+                  </>
+                )}
               </div>
-            </div>
-          )}
+            )
+          })()}
 
           {/* Start Research CTA */}
           <div className="card bg-gradient-to-r from-gray-900 via-gray-900 to-blue-950/40 border border-blue-900/40 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
@@ -1007,6 +1121,25 @@ export default function Dashboard() {
       )}
     </div>
   )
+}
+
+function formatRelativeTime(dateStr?: string): string {
+  if (!dateStr) return 'Verified Wire'
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return dateStr
+    const diffMs = Date.now() - d.getTime()
+    const diffMins = Math.floor(diffMs / (1000 * 60))
+    if (diffMins < 1) return 'Just now'
+    if (diffMins < 60) return `${diffMins}m ago`
+    const diffHours = Math.floor(diffMins / 60)
+    if (diffHours < 24) return `${diffHours}h ago`
+    const diffDays = Math.floor(diffHours / 24)
+    if (diffDays < 7) return `${diffDays}d ago`
+    return d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })
+  } catch {
+    return 'Verified Wire'
+  }
 }
 
 function Metric({

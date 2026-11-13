@@ -58,8 +58,8 @@ async def stock_news(
     market: str = Query("NSE", pattern="^(NSE|BSE|US)$"),
     current_user: User = Depends(get_current_user),
 ):
-    """Latest real-time financial news for stock and market, updated by the minute."""
-    articles = get_live_news(ticker)
+    """Latest real-time financial news specifically for the selected stock, updated by the minute."""
+    articles = get_live_news(ticker, market=market)
     return {"ticker": ticker.upper(), "market": market, "count": len(articles), "articles": articles}
 
 

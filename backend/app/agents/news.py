@@ -39,59 +39,49 @@ _keyword_sentiment = _classify_sentiment_local
 
 
 def _analyze_sentiment_with_ollama(articles: List[Dict]) -> List[Dict]:
-    """Use Ollama to classify sentiment for each article."""
+    """Classify sentiment using high-speed keyword analysis with optional batched Ollama enhancement."""
+    # 1. Base classification for all articles using optimized financial lexicon
+    for a in articles:
+        if not a.get("sentiment"):
+            a["sentiment"] = _classify_sentiment_local(a["title"], a.get("summary", ""))
+        a["category"] = a.get("category", "other")
+        a["sentiment_reason"] = "Classified using financial lexicon analysis"
+
+    # 2. Batch top 5 articles into a single Ollama prompt if available
     try:
         llm = ChatOllama(
             base_url=settings.OLLAMA_BASE_URL,
             model=settings.OLLAMA_MODEL,
             temperature=0,
+            timeout=8.0,
         )
 
-        classified = []
-        for article in articles[:10]:
-            prompt = f"""Classify the sentiment of this financial news article as exactly one of: positive, negative, or neutral.
-Also identify if it relates to: earnings, acquisition, regulatory, management_change, product_launch, or other.
+        top_articles = articles[:5]
+        headlines_text = "\n".join([f"{i+1}. {a['title']}" for i, a in enumerate(top_articles)])
+        prompt = f"""Classify the financial sentiment of each headline as positive, negative, or neutral.
+Also categorize as earnings, acquisition, regulatory, management_change, product_launch, or other.
 
-Title: {article['title']}
-Summary: {article['summary'][:300]}
+HEADLINES:
+{headlines_text}
 
-Respond in JSON format only:
-{{"sentiment": "positive|negative|neutral", "category": "earnings|acquisition|regulatory|management_change|product_launch|other", "reason": "one sentence explanation"}}"""
+Respond in JSON list only:
+[{{"id": 1, "sentiment": "positive|negative|neutral", "category": "category"}}, ...]"""
 
-            try:
-                response = llm.invoke([HumanMessage(content=prompt)])
-                content = response.content.strip()
-                if "{" in content:
-                    json_str = content[content.find("{"):content.rfind("}") + 1]
-                    parsed = json.loads(json_str)
-                    article["sentiment"] = parsed.get("sentiment", "neutral")
-                    article["category"] = parsed.get("category", "other")
-                    article["sentiment_reason"] = parsed.get("reason", "")
-                else:
-                    raise ValueError("No JSON in response")
-            except Exception:
-                article["sentiment"] = _classify_sentiment_local(
-                    article["title"], article["summary"]
-                )
-                article["category"] = "other"
-                article["sentiment_reason"] = "Classified using keyword analysis"
-
-            classified.append(article)
-
-        for article in articles[10:]:
-            article["sentiment"] = _classify_sentiment_local(article["title"], article["summary"])
-            article["category"] = "other"
-            article["sentiment_reason"] = "Classified using keyword analysis"
-            classified.append(article)
-
-        return classified
-
+        response = llm.invoke([HumanMessage(content=prompt)])
+        content = response.content.strip()
+        if "[" in content:
+            json_str = content[content.find("["):content.rfind("]") + 1]
+            items = json.loads(json_str)
+            for item in items:
+                idx = item.get("id", 1) - 1
+                if 0 <= idx < len(top_articles):
+                    top_articles[idx]["sentiment"] = item.get("sentiment", top_articles[idx]["sentiment"])
+                    top_articles[idx]["category"] = item.get("category", "other")
+                    top_articles[idx]["sentiment_reason"] = "Refined by Ollama AI agent"
     except Exception:
-        for article in articles:
-            article["sentiment"] = _classify_sentiment_local(article["title"], article["summary"])
-            article["category"] = "other"
-            article["sentiment_reason"] = "Classified using keyword analysis (Ollama unavailable)"
-        return articles
+        pass
+
+    return articles
 
 
 def news_agent(state: ResearchState) -> ResearchState:
@@ -103,7 +93,8 @@ def news_agent(state: ResearchState) -> ResearchState:
         if state.get("fundamental_result") and state["fundamental_result"].get("company"):
             company_name = state["fundamental_result"]["company"].get("name")
 
-        articles = fetch_news_for_ticker(ticker.split(".")[0], company_name)
+        market = state.get("market", "NSE")
+        articles = fetch_news_for_ticker(ticker.split(".")[0], company_name, market=market)
 
         if not articles:
             state["news_status"] = "unavailable"
