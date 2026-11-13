@@ -8,7 +8,7 @@ from langchain.schema import HumanMessage
 import json
 
 
-def _classify_sentiment_local(title: str, summary: str) -> str:
+def _classify_sentiment_local(title: str, summary: str = "") -> str:
     """
     Rule-based sentiment classification as fallback when LLM unavailable.
     Returns: positive | negative | neutral
@@ -17,20 +17,25 @@ def _classify_sentiment_local(title: str, summary: str) -> str:
     positive_words = [
         "surge", "rally", "gain", "rise", "profit", "growth", "record", "high",
         "beat", "strong", "upgrade", "buy", "bullish", "positive", "expand",
-        "acquisition", "deal", "win", "approval", "launch"
+        "acquisition", "deal", "win", "approval", "product launch", "dividend"
     ]
     negative_words = [
         "fall", "drop", "decline", "loss", "miss", "weak", "downgrade", "sell",
         "bearish", "negative", "cut", "risk", "concern", "fraud", "penalty",
-        "investigation", "crash", "slump", "warning", "debt"
+        "investigation", "crash", "slump", "warning", "debt", "probe", "layoffs"
     ]
     pos_score = sum(1 for w in positive_words if w in text)
     neg_score = sum(1 for w in negative_words if w in text)
+    if any(k in text for k in ("probe", "fraud", "scandal", "investigation", "penalty")):
+        neg_score += 2
     if pos_score > neg_score:
         return "positive"
     elif neg_score > pos_score:
         return "negative"
     return "neutral"
+
+
+_keyword_sentiment = _classify_sentiment_local
 
 
 def _analyze_sentiment_with_ollama(articles: List[Dict]) -> List[Dict]:
@@ -123,9 +128,14 @@ def news_agent(state: ResearchState) -> ResearchState:
         else:
             overall_sentiment = "Neutral/Mixed"
 
+        for a in classified_articles:
+            if "source_url" not in a and "url" in a:
+                a["source_url"] = a["url"]
+
         result = {
             "status": "completed",
             "articles_analyzed": total,
+            "total_articles": total,
             "overall_sentiment": overall_sentiment,
             "sentiment_breakdown": {
                 "positive": positive_count,

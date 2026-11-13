@@ -116,13 +116,19 @@ def risk_agent(state: ResearchState) -> ResearchState:
                 if beta > 1.5:
                     fund_risks.append(f"High market sensitivity — Beta of {beta:.2f}")
 
+        vol = price_risk.get("historical_volatility_annualized_pct") if price_risk else None
+        overall = _overall_risk_level(price_risk, conflicts, fund_risks)
+
         result = {
             "status": "completed",
             "price_risk": price_risk,
+            "volatility": vol,
+            "overall_risk": overall,
+            "overall_risk_level": overall,
             "fundamental_risks": fund_risks,
+            "conflicts": conflicts,
             "conflicts_detected": conflicts,
             "data_gaps": data_gaps,
-            "overall_risk_level": _overall_risk_level(price_risk, conflicts, fund_risks),
             "disclaimer": (
                 "Risk metrics are based on historical data and do not guarantee future outcomes. "
                 "Investors should conduct their own due diligence."

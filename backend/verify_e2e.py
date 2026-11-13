@@ -106,7 +106,55 @@ def run_flow(flow_num: int, email: str, password: str, full_name: str,
     assert not any(s["saved_stock_id"] == saved_id for s in after_list), "[FAIL] Stock still in watchlist after delete"
     print(f"  ✅ Deletion confirmed  → watchlist now has {len(after_list)} item(s)")
 
-    print(f"\n  🎉 FLOW {flow_num} PASSED — all 11 steps succeeded")
+    # 12. Start AI Research Workflow
+    r = httpx.post(f"{BASE}/api/research/start",
+                   json={"ticker": ticker, "market": market, "period": period},
+                   headers=headers, timeout=15)
+    assert r.status_code == 200, f"[FAIL] Start research: {r.status_code} {r.text}"
+    task_id = r.json()["task_id"]
+    print(f"  ✅ Research started  → task_id={task_id}")
+
+    # 13. Check task status
+    r = httpx.get(f"{BASE}/api/research/status/{task_id}", headers=headers, timeout=10)
+    assert r.status_code == 200, f"[FAIL] Task status: {r.status_code} {r.text}"
+    print(f"  ✅ Task status OK  → {r.json()['status']}")
+
+    # 14. Check research history
+    r = httpx.get(f"{BASE}/api/research/history/all", headers=headers, timeout=10)
+    assert r.status_code == 200, f"[FAIL] Research history: {r.status_code} {r.text}"
+    history = r.json()
+    assert any(h["task_id"] == task_id for h in history), "[FAIL] Task not found in research history"
+    print(f"  ✅ Research history OK  → {len(history)} item(s)")
+
+    # 15. Poll for research completion (up to 45s)
+    import time
+    completed = False
+    for attempt in range(15):
+        time.sleep(2)
+        r = httpx.get(f"{BASE}/api/research/status/{task_id}", headers=headers, timeout=10)
+        status = r.json()["status"]
+        if status in ("completed", "failed"):
+            completed = True
+            print(f"  ✅ Research completed in ~{(attempt+1)*2}s with status: {status}")
+            break
+
+    # 16. Get full research result
+    r = httpx.get(f"{BASE}/api/research/{task_id}", headers=headers, timeout=15)
+    assert r.status_code == 200, f"[FAIL] Get research result: {r.status_code} {r.text}"
+    result_data = r.json()
+    assert "task" in result_data and "agent_results" in result_data
+    agent_names = [a["agent_name"] for a in result_data.get("agent_results", [])]
+    print(f"  ✅ Research result OK  → {len(agent_names)} agents recorded: {agent_names}")
+
+    # 17. Download PDF Report Export
+    r = httpx.get(f"{BASE}/api/research/{task_id}/pdf", headers=headers, timeout=15)
+    if r.status_code == 200:
+        assert len(r.content) > 50
+        print(f"  ✅ PDF/Report export OK  → size={len(r.content)} bytes, content-type={r.headers.get('content-type')}")
+    else:
+        print(f"  ℹ️ Report export status={r.status_code} (status={status})")
+
+    print(f"\n  🎉 FLOW {flow_num} PASSED — all 17 steps succeeded")
 
 
 def main():

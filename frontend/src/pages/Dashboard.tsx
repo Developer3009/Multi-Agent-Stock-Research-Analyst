@@ -228,7 +228,23 @@ export default function Dashboard() {
                   </button>
                 ))}
               </div>
-              <StockChart data={chartData} ticker={selectedTicker} market={market} height={380} />
+              <StockChart
+                data={chartData}
+                ticker={selectedTicker}
+                market={market}
+                height={380}
+                sma={(() => {
+                  const techResult = fullResearch?.agent_results?.find((r) => r.agent_name === 'technical')
+                  const output = techResult?.output_json as Record<string, any> | undefined
+                  const chartDataTech = output?.chart_data as Array<{ date: string; sma20?: number; sma50?: number }> | undefined
+                  if (!chartDataTech) return undefined
+                  return {
+                    dates: chartData.map((d) => d.date),
+                    sma20: chartData.map((d) => chartDataTech.find((c) => c.date === d.date)?.sma20 ?? null),
+                    sma50: chartData.map((d) => chartDataTech.find((c) => c.date === d.date)?.sma50 ?? null),
+                  }
+                })()}
+              />
             </div>
           )}
 

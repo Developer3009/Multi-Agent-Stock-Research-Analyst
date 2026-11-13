@@ -4,13 +4,14 @@ import { TrendingUp, Loader2 } from 'lucide-react'
 
 interface Props {
   onLogin: (email: string, password: string) => Promise<void>
-  onRegister: (email: string, password: string) => Promise<void>
+  onRegister: (email: string, password: string, fullName?: string) => Promise<void>
 }
 
 export default function Login({ onLogin, onRegister }: Props) {
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [fullName, setFullName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const navigate = useNavigate()
@@ -23,7 +24,7 @@ export default function Login({ onLogin, onRegister }: Props) {
       if (mode === 'login') {
         await onLogin(email, password)
       } else {
-        await onRegister(email, password)
+        await onRegister(email, password, fullName.trim() || undefined)
       }
       navigate('/')
     } catch (err: unknown) {
@@ -62,6 +63,18 @@ export default function Login({ onLogin, onRegister }: Props) {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {mode === 'register' && (
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Full Name <span className="text-gray-600">(optional)</span></label>
+                <input
+                  className="input"
+                  type="text"
+                  placeholder="Your name"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                />
+              </div>
+            )}
             <div>
               <label className="block text-sm text-gray-400 mb-1">Email</label>
               <input

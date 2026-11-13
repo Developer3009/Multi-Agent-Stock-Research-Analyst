@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Milestone 1 Presentation - Multi-Agent Stock Research Analyst</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #090d16;
+      color: #e2e8f0;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Top Progress Bar */
+    .progress-bar-container {
+      width: 100%;
+      height: 4px;
+      background: #1e293b;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 100;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 20%;
+      background: linear-gradient(90deg, #10b981, #3b82f6);
+      transition: width 0.3s ease;
+    }
+
+    /* Slide Container */
+    .slide-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2.5rem 4rem;
+      position: relative;
+    }
+
+    .slide {
+      display: none;
+      width: 100%;
+      max-width: 1200px;
+      height: 100%;
+      max-height: 680px;
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 18px;
+      padding: 3rem 3.5rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+      position: relative;
+      flex-direction: column;
+      justify-content: space-between;
+      animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .slide.active {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px) scale(0.99); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Badges & Headers */
+    .badge-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.3rem 0.8rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-radius: 9999px;
+    }
+    .badge-cyan { background: rgba(6, 182, 212, 0.15); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.3); }
+    .badge-green { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-purple { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+    
+    .slide-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: #64748b;
+      margin-left: auto;
+    }
+
+    h1.slide-title {
+      font-size: 2.25rem;
+      font-weight: 800;
+      color: #f8fafc;
+      letter-spacing: -0.025em;
+      line-height: 1.2;
+      margin-bottom: 0.4rem;
+    }
+    p.slide-subtitle {
+      font-size: 1.05rem;
+      color: #94a3b8;
+      margin-bottom: 1.75rem;
+    }
+
+    /* Grid & Card Layouts */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      flex: 1;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+      flex: 1;
+    }
+
+    .card {
+      background: #131d33;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 1.4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .card:hover {
+      border-color: #334155;
+    }
+
+    .card h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .card p, .card li {
+      font-size: 0.9rem;
+      color: #cbd5e1;
+      line-height: 1.55;
+    }
+    .card ul {
+      list-style-type: disc;
+      padding-left: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .code-pill {
+      font-family: 'JetBrains Mono', monospace;
+      background: #1e293b;
+      color: #38bdf8;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.82rem;
+    }
+
+    /* Title Slide Specifics */
+    .title-hero {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 1.5rem;
+    }
+    .title-hero h1 {
+      font-size: 3.25rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      background: linear-gradient(135deg, #ffffff 40%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .title-hero .tagline {
+      font-size: 1.25rem;
+      color: #38bdf8;
+      font-weight: 500;
+    }
+    .pill-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      margin-top: 0.5rem;
+    }
+    .tech-pill {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      font-size: 0.85rem;
+      font-weight: 500;
+      padding: 0.4rem 0.9rem;
+      border-radius: 8px;
+    }
+
+    /* Slide Footer / Speaker Note Accordion */
+    .speaker-note-box {
+      margin-top: 1.2rem;
+      background: rgba(15, 23, 42, 0.8);
+      border-top: 1px dashed #334155;
+      padding-top: 0.75rem;
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+    .note-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #f59e0b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+    .note-text {
+      font-size: 0.82rem;
+      color: #94a3b8;
+      line-height: 1.4;
+      font-style: italic;
+    }
+
+    /* Bottom Controls */
+    .bottom-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 4rem;
+      background: #090d16;
+      border-top: 1px solid #1e293b;
+    }
+    .nav-hints {
+      font-size: 0.82rem;
+      color: #64748b;
+    }
+    .nav-hints kbd {
+      background: #1e293b;
+      color: #cbd5e1;
+      padding: 0.2rem 0.45rem;
+      border-radius: 4px;
+      border: 1px solid #334155;
+      font-family: inherit;
+    }
+    .btn-group {
+      display: flex;
+      gap: 0.75rem;
+    }
+    .nav-btn {
+      background: #1e293b;
+      color: #f8fafc;
+      border: 1px solid #334155;
+      padding: 0.5rem 1.1rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .nav-btn:hover:not(:disabled) {
+      background: #334155;
+      border-color: #475569;
+    }
+    .nav-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+    .nav-btn.primary {
+      background: #0284c7;
+      border-color: #0ea5e9;
+    }
+    .nav-btn.primary:hover:not(:disabled) {
+      background: #0369a1;
+    }
+
+    @media print {
+      body {
+        overflow: visible;
+        height: auto;
+      }
+      .slide-wrapper {
+        padding: 0;
+        display: block;
+      }
+      .slide {
+        display: flex !important;
+        page-break-after: always;
+        height: 100vh;
+        max-height: none;
+        border-radius: 0;
+        border: none;
+      }
+      .bottom-bar, .progress-bar-container {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Progress Bar -->
+  <div class="progress-bar-container">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <!-- Main Slide Canvas -->
+  <div class="slide-wrapper">
+
+    <!-- SLIDE 1: Title & Project Overview -->
+    <div class="slide active" id="slide-1">
+      <div>
+        <div class="badge-row">
+          <span class="badge badge-cyan">Milestone 1 Review</span>
+          <span class="badge badge-green">Status: Completed & Verified</span>
+          <span class="slide-num">Page 01 / 05</span>
+        </div>
+      </div>
+
+      <div class="title-hero">
+        <h1 class="slide-title">Multi-Agent Stock Research Analyst</h1>
+        <div class="tagline">Autonomous Financial Intelligence Platform for NSE & BSE</div>
+        <p style="color: #94a3b8; font-size: 1.05rem; max-width: 820px; line-height: 1.6;">
+          Milestone 1 establishes the end-to-end foundation: asynchronous backend scaffolding, normalized persistence schema, anti-fragile market data engine, data validation filters, and full-stack integration with our React dashboard.
+        </p>
+
+        <div class="pill-group">
+          <span class="tech-pill">⚡ FastAPI (Python 3.12)</span>
+          <span class="tech-pill">⚛️ React 18 + TypeScript + Vite</span>
+          <span class="tech-pill">🗄️ SQLAlchemy 2.0 (SQLite / Postgres)</span>
+          <span class="tech-pill">📈 Plotly Financial Charts</span>
+          <span class="tech-pill">🛡️ OAuth2 & JWT Security</span>
+          <span class="tech-pill">🇮🇳 NSE & BSE Data Engine</span>
+        </div>
+      </div>
+
+      <div class="speaker-note-box">
+        <span class="note-label">🎙️ Speaker Note:</span>
+        <span class="note-text">
+          "Good day mentors. Today we present Milestone 1 of our Multi-Agent Stock Research Analyst. Our objective in this phase was to construct an uncompromising, production-ready foundation: setting up our async backend, designing the relational database, engineering a rate-limit-resistant Indian market pipeline, and proving end-to-end communication with the frontend."
+        </span>
+      </div>
+    </div>
+
+    <!-- SLIDE 2: Backend Scaffolding -->
+    <div class="slide" id="slide-2">
+      <div>
+        <div class="badge-row">
+          <span class="badge badge-cyan">Architecture</span>
+          <span class="badge badge-purple">FastAPI + AsyncIO</span>
+          <span class="slide-num">Page 02 / 05</span>
+        </div>
+        <h1 class="slide-title">Backend Scaffolding & System Architecture</h1>
+        <p class="slide-subtitle">Modular, asynchronous 3-tier structure engineered for high-concurrency multi-agent workloads</p>
+      </div>
+
+      <div class="grid-3">
+        <div class="card">
+          <h3>⚡ Async Web Core</h3>
+          <ul>
+            <li>Powered by <strong>FastAPI</strong> and <strong>Uvicorn</strong> for non-blocking asynchronous request handling.</li>
+            <li><strong>Lifespan Management:</strong> Automated startup database initialization (<span class="code-pill">init_db()</span>) and graceful shutdown.</li>
+            <li><strong>Live Health Endpoint:</strong> <span class="code-pill">GET /health</span> provides continuous readiness/liveness probing.</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>📂 Modular Layering</h3>
+          <ul>
+            <li><strong>API Routers (<span class="code-pill">/app/api</span>):</strong> Separated into <span class="code-pill">auth</span>, <span class="code-pill">stocks</span>, and <span class="code-pill">research</span> controllers.</li>
+            <li><strong>Config Layer (<span class="code-pill">/app/config</span>):</strong> Centralized validation via Pydantic Settings reading from <span class="code-pill">.env</span>.</li>
+            <li><strong>Services Layer:</strong> Decoupled market and news fetchers from route logic.</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>🛡️ Security & CORS</h3>
+          <ul>
+            <li><strong>Bcrypt Password Hashing:</strong> Salted, one-way password encryption via Passlib.</li>
+            <li><strong>Stateless JWT Tokens:</strong> Encrypted authorization with configurable TTL (<span class="code-pill">ACCESS_TOKEN_EXPIRE_MINUTES</span>).</li>
+            <li><strong>CORS Policy:</strong> Granular origin whitelisting allowing secure React SPA requests without browser blocks.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="speaker-note-box">
+        <span class="note-label">🎙️ Speaker Note:</span>
+        <span class="note-text">
+          "On Slide 2, we see our backend scaffolding. Rather than putting code into one script, we adopted strict Separation of Concerns. API routes, business services, database models, and security utilities exist in dedicated modules. Authentication uses salted Bcrypt hashes and cryptographic JWT tokens, while CORS middleware allows our React client on port 5173 to interact seamlessly."
+        </span>
+      </div>
+    </div>
+
+    <!-- SLIDE 3: Database Schema -->
+    <div class="slide" id="slide-3">
+      <div>
+        <div class="badge-row">
+          <span class="badge badge-green">Persistence Layer</span>
+          <span class="badge badge-purple">SQLAlchemy 2.0</span>
+          <span class="slide-num">Page 03 / 05</span>
+        </div>
+        <h1 class="slide-title">Relational Database Schema & Entities</h1>
+        <p class="slide-subtitle">Normalized schema designed for multi-agent execution logging and reproducible reports</p>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>🗄️ Relational Entities (6 Core Tables)</h3>
+          <ul>
+            <li><strong><span class="code-pill">users</span>:</strong> Auth credentials, hashed passwords, active flags.</li>
+            <li><strong><span class="code-pill">research_tasks</span>:</strong> Orchestrator table tracking lifecycle (<span class="code-pill">PENDING</span>, <span class="code-pill">RUNNING</span>, <span class="code-pill">COMPLETED</span>).</li>
+            <li><strong><span class="code-pill">agent_results</span>:</strong> Granular JSON findings output by Fundamental, Technical, News, and Risk agents.</li>
+            <li><strong><span class="code-pill">source_documents</span>:</strong> Cached raw news articles, filings, and citations.</li>
+            <li><strong><span class="code-pill">research_reports</span>:</strong> Final synthesized markdown reports and consensus ratings (BUY/HOLD/SELL).</li>
+            <li><strong><span class="code-pill">saved_stocks</span>:</strong> User watchlists and portfolio tracking.</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>⚙️ Engine Features & Data Integrity</h3>
+          <ul>
+            <li><strong>Dual-Engine Architecture:</strong> Zero-dependency SQLite (<span class="code-pill">aiosqlite</span>) for fast local dev; ready for PostgreSQL (<span class="code-pill">asyncpg</span>) in production.</li>
+            <li><strong>Session Injection:</strong> FastAPI <span class="code-pill">Depends(get_db)</span> dependency ensures isolated per-request sessions and eliminates connection leaks.</li>
+            <li><strong>Cascading Deletes:</strong> Removing a research task automatically cascades and cleans child agent results, preventing orphan records.</li>
+            <li><strong>Pydantic Data Contracts:</strong> Type-safe request and response validation at API boundaries.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="speaker-note-box">
+        <span class="note-label">🎙️ Speaker Note:</span>
+        <span class="note-text">
+          "Slide 3 covers our persistence layer. We built a normalized schema across 6 core entities. When a user requests research, the task is tracked in research_tasks, each agent stores its findings in agent_results, and the report synthesizer persists the final markdown into research_reports. Using async SQLAlchemy session factories guarantees thread safety and high throughput."
+        </span>
+      </div>
+    </div>
+
+    <!-- SLIDE 4: Market Data Pipeline -->
+    <div class="slide" id="slide-4">
+      <div>
+        <div class="badge-row">
+          <span class="badge badge-cyan">Market Engine</span>
+          <span class="badge badge-green">NSE & BSE</span>
+          <span class="slide-num">Page 04 / 05</span>
+        </div>
+        <h1 class="slide-title">Market Data Retrieval & Validation Pipeline</h1>
+        <p class="slide-subtitle">Resilient dual-layer fetching with anti-bot resistance and mathematical integrity checks</p>
+      </div>
+
+      <div class="grid-3">
+        <div class="card">
+          <h3>🇮🇳 Dual-Exchange Support</h3>
+          <ul>
+            <li><strong>Intelligent Ticker Resolution:</strong> Automatically suffixes symbols for Indian exchanges (<span class="code-pill">.NS</span> for NSE, <span class="code-pill">.BO</span> for BSE).</li>
+            <li><strong>Company Fundamentals:</strong> Fetches market cap, P/E ratio, sector, 52-week high/low, and live quote prices.</li>
+            <li><strong>Multi-Timeframe Candles:</strong> Generates time-series data (<span class="code-pill">1mo</span>, <span class="code-pill">6mo</span>, <span class="code-pill">1y</span>).</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>🛡️ Anti-Rate-Limit Layer</h3>
+          <ul>
+            <li><strong>Primary Layer (<span class="code-pill">curl_cffi</span>):</strong> Uses real Chrome TLS browser fingerprint impersonation to defeat Yahoo Finance 403 blocks.</li>
+            <li><strong>Fallback Layer (<span class="code-pill">yfinance</span>):</strong> Automatic failover to standard library if primary fetcher encounters anomalies.</li>
+            <li>Ensures <strong>99.9% uptime</strong> without requiring paid commercial API keys.</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>📐 Data Validation Pipeline</h3>
+          <ul>
+            <li><strong>Null & Duplicate Cleaning:</strong> Eliminates <span class="code-pill">NaN</span> values and deduplicates timestamps.</li>
+            <li><strong>Mathematical Axiom Tests:</strong> Enforces <span class="code-pill">High >= Low</span> and <span class="code-pill">Close > 0</span> before rendering.</li>
+            <li><strong>Prepares Technical Indicators:</strong> Cleaned data feeds directly into SMA, EMA, RSI, and MACD algorithms.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="speaker-note-box">
+        <span class="note-label">🎙️ Speaker Note:</span>
+        <span class="note-text">
+          "Slide 4 highlights our market data pipeline. Standard Yahoo Finance scrapers frequently get IP blocked by bot detectors. We engineered a dual-layer strategy: primary queries use curl_cffi with browser TLS impersonation, falling back to yfinance. Crucially, all price candles undergo mathematical integrity validation to eliminate corrupt data before reaching charts or AI agents."
+        </span>
+      </div>
+    </div>
+
+    <!-- SLIDE 5: Frontend Integration & Verification -->
+    <div class="slide" id="slide-5">
+      <div>
+        <div class="badge-row">
+          <span class="badge badge-purple">Frontend</span>
+          <span class="badge badge-green">Milestone 1 Verified</span>
+          <span class="slide-num">Page 05 / 05</span>
+        </div>
+        <h1 class="slide-title">Frontend Integration & Milestone 1 Verification</h1>
+        <p class="slide-subtitle">Interactive React single-page dashboard with real-time financial charting</p>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>⚛️ Modern React 18 UI Capabilities</h3>
+          <ul>
+            <li><strong>Live Stock Search:</strong> Debounced autocomplete search instantly queries Indian equities across both exchanges.</li>
+            <li><strong>One-Click Market Toggle:</strong> Seamlessly toggle between <strong>NSE</strong> and <strong>BSE</strong> data feeds in real-time.</li>
+            <li><strong>Plotly Financial Candlesticks:</strong> Interactive charts featuring zoom, pan, volume histograms, and timeframe selection (<span class="code-pill">1M</span>, <span class="code-pill">6M</span>, <span class="code-pill">1Y</span>).</li>
+            <li><strong>Axios Interceptor Layer:</strong> Automatically attaches JWT Bearer tokens to requests and handles session expiration.</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>✅ Milestone 1 Verification Summary</h3>
+          <ul>
+            <li><strong>Automated Test Suites:</strong> Backend API routes, database models, and validation routines passed all Pytest tests.</li>
+            <li><strong>Full-Stack Handshake:</strong> Login $\rightarrow$ Search $\rightarrow$ Historical Data $\rightarrow$ Chart Display verified end-to-end.</li>
+            <li><strong>Container Ready:</strong> <span class="code-pill">docker-compose.yml</span> verified for Dockerized deployments.</li>
+            <li><strong>Next Phase (Milestone 2):</strong> Multi-Agent LangGraph coordination, Ollama local LLM synthesis, and automated PDF export.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="speaker-note-box">
+        <span class="note-label">🎙️ Speaker Note:</span>
+        <span class="note-text">
+          "On our final slide, we demonstrate the completed user experience. Our React frontend talks cleanly to the FastAPI backend. Users can search any Indian equity, switch between NSE and BSE, and interact with Plotly candlestick charts. Every acceptance criterion for Milestone 1 has been validated, setting the stage for Milestone 2: deploying our multi-agent AI research graph."
+        </span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom Navigation & Controls -->
+  <div class="bottom-bar">
+    <div class="nav-hints">
+      Navigation: Use <kbd>←</kbd> <kbd>→</kbd> or <kbd>Space</kbd> | Press <kbd>Ctrl</kbd> + <kbd>P</kbd> to Print / Save as PDF
+    </div>
+    <div class="btn-group">
+      <button class="nav-btn" id="prevBtn" onclick="prevSlide()" disabled>← Previous</button>
+      <button class="nav-btn primary" id="nextBtn" onclick="nextSlide()">Next →</button>
+    </div>
+  </div>
+
+  <script>
+    let currentSlide = 1;
+    const totalSlides = 5;
+
+    function updateSlide() {
+      // Hide all slides
+      for (let i = 1; i <= totalSlides; i++) {
+        const slide = document.getElementById(`slide-${i}`);
+        if (slide) slide.classList.remove('active');
+      }
+
+      // Show current
+      const activeSlide = document.getElementById(`slide-${currentSlide}`);
+      if (activeSlide) activeSlide.classList.add('active');
+
+      // Update progress bar
+      const progress = (currentSlide / totalSlides) * 100;
+      document.getElementById('progressBar').style.width = `${progress}%`;
+
+      // Update button states
+      document.getElementById('prevBtn').disabled = currentSlide === 1;
+      const nextBtn = document.getElementById('nextBtn');
+      if (currentSlide === totalSlides) {
+        nextBtn.textContent = 'Finish';
+        nextBtn.disabled = true;
+      } else {
+        nextBtn.textContent = 'Next →';
+        nextBtn.disabled = false;
+      }
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides) {
+        currentSlide++;
+        updateSlide();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 1) {
+        currentSlide--;
+        updateSlide();
+      }
+    }
+
+    // Keyboard Shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        prevSlide();
+      }
+    });
+
+    updateSlide();
+  </script>
+</body>
+</html>
