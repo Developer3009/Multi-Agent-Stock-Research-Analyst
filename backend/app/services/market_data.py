@@ -187,7 +187,7 @@ def get_market_movers() -> Dict[str, List[Dict[str, Any]]]:
     ]
 
     bullish_list = []
-    for idx, s in enumerate(results[:10]):
+    for idx, s in enumerate(results[:5]):
         item = dict(s)
         item["signal"] = bullish_signals[idx % len(bullish_signals)]
         item["category"] = "bullish"
