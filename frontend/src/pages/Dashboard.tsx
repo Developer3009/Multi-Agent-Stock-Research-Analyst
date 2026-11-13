@@ -42,6 +42,7 @@ export default function Dashboard() {
   const [lastUpdated, setLastUpdated] = useState<string>('')
   const [refreshing, setRefreshing] = useState(false)
   const [liveNews, setLiveNews] = useState<NewsItem[]>([])
+  const [liveSource, setLiveSource] = useState<string>('Alpha Vantage API')
 
   // Research state
   const [researchTask, setResearchTask] = useState<ResearchTask | null>(null)
@@ -98,6 +99,9 @@ export default function Dashboard() {
       ])
 
       if (liveRes?.data?.current_price) {
+        if (liveRes.data.source || liveRes.data.api_source) {
+          setLiveSource(liveRes.data.api_source || liveRes.data.source)
+        }
         setStockInfo((prev) => prev ? {
           ...prev,
           current_price: liveRes.data.current_price,
@@ -300,10 +304,14 @@ export default function Dashboard() {
 
                 {/* Key Metrics & Live Badge */}
                 <div className="flex flex-col gap-3">
-                  <div className="flex items-center justify-end gap-3 bg-gray-900/50 px-3 py-1.5 rounded-lg border border-gray-800">
+                  <div className="flex items-center justify-end gap-2.5 bg-gray-900/60 px-3 py-1.5 rounded-lg border border-gray-800 flex-wrap">
+                    <div className="flex items-center gap-1.5 text-[11px] bg-blue-950/70 border border-blue-800/60 px-2 py-0.5 rounded text-blue-300 font-medium">
+                      <Zap className="w-3 h-3 text-yellow-400" />
+                      <span>{liveSource}</span>
+                    </div>
                     <div className="flex items-center gap-2 text-xs">
                       <span className={clsx("w-2 h-2 rounded-full", autoRefresh ? "bg-green-400 animate-ping" : "bg-gray-600")} />
-                      <span className="text-gray-400 font-medium">
+                      <span className="text-gray-400 font-medium text-xs">
                         {autoRefresh ? "Live 1m" : "Paused"}
                       </span>
                       {lastUpdated && (

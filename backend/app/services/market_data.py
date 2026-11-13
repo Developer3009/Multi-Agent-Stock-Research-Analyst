@@ -237,7 +237,8 @@ def _fetch_chart_data(yf_ticker: str, period: str = "1y") -> Optional[Dict[str, 
 
 def get_live_quote(ticker: str, market: str) -> Dict[str, Any]:
     """
-    Fetch real-time 1-minute updated price quote from Yahoo Finance.
+    Fetch real-time updated price quote prioritizing Alpha Vantage API (with user's key),
+    with seamless fallback to high-speed browser-impersonated Yahoo Finance.
     Caches for 45s so client polling every 60s always stays synchronized with live data.
     """
     yf_ticker = get_yf_ticker(ticker, market)
@@ -248,6 +249,24 @@ def get_live_quote(ticker: str, market: str) -> Dict[str, Any]:
         if now - cached.get("_cached_at", 0) < 45:
             return cached["data"]
 
+    # 1. Try Alpha Vantage Official API first (Free API Key)
+    try:
+        from app.services.alpha_vantage import fetch_alpha_vantage_quote
+        av_quote = fetch_alpha_vantage_quote(ticker, market)
+        if av_quote and av_quote.get("current_price"):
+            matched_name = next(
+                (s["name"] for s in (POPULAR_US_STOCKS if market.upper() in ("US", "NASDAQ", "NYSE") else POPULAR_INDIAN_STOCKS) if s["ticker"] == ticker.upper()),
+                ticker.upper()
+            )
+            av_quote["name"] = matched_name
+            av_quote["yf_ticker"] = yf_ticker
+            av_quote["api_source"] = "Alpha Vantage (Real-Time)"
+            _quote_cache[yf_ticker] = {"data": av_quote, "_cached_at": now}
+            return av_quote
+    except Exception:
+        pass
+
+    # 2. Resilient Browser-Impersonated Fallback
     url = f"https://query1.finance.yahoo.com/v8/finance/chart/{yf_ticker}?range=1d&interval=1m"
     try:
         resp = cffi_requests.get(url, impersonate="chrome", timeout=10)
@@ -261,7 +280,7 @@ def get_live_quote(ticker: str, market: str) -> Dict[str, Any]:
                 change_pct = round((change / prev_close) * 100, 2) if prev_close else 0.0
 
                 matched_name = next(
-                    (s["name"] for s in POPULAR_INDIAN_STOCKS if s["ticker"] == ticker.upper()),
+                    (s["name"] for s in (POPULAR_US_STOCKS if market.upper() in ("US", "NASDAQ", "NYSE") else POPULAR_INDIAN_STOCKS) if s["ticker"] == ticker.upper()),
                     meta.get("shortName") or meta.get("symbol") or ticker.upper()
                 )
 
@@ -278,9 +297,11 @@ def get_live_quote(ticker: str, market: str) -> Dict[str, Any]:
                     "day_low": meta.get("regularMarketDayLow"),
                     "volume": meta.get("regularMarketVolume"),
                     "market_time": meta.get("regularMarketTime"),
-                    "currency": meta.get("currency", "INR"),
+                    "currency": meta.get("currency", "USD" if market.upper() in ("US", "NASDAQ", "NYSE") else "INR"),
                     "exchange": meta.get("exchangeName", market),
                     "last_updated": datetime.utcnow().strftime("%H:%M:%S UTC"),
+                    "source": "Yahoo Finance (1m)",
+                    "api_source": "Yahoo Finance Live",
                     "status": "live",
                 }
                 _quote_cache[yf_ticker] = {"data": quote_data, "_cached_at": now}

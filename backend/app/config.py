@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     NEWS_FEED_ET: str = "https://economictimes.indiatimes.com/markets/stocks/rss.cms"
     NEWS_FEED_MINT: str = "https://www.livemint.com/rss/markets"
 
+    ALPHA_VANTAGE_API_KEY: str = "6OZCUO3WUNU0III9"
+
     ALLOWED_ORIGINS: Union[List[str], str] = ["http://localhost:5173", "http://localhost:3000"]
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
