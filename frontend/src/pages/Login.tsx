@@ -1,7 +1,9 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, Loader2, Check, Zap } from 'lucide-react'
+import { Eye, EyeOff, Loader2, Check, Zap, Sun, Moon } from 'lucide-react'
 import InteractiveStockCanvas from '../components/InteractiveStockCanvas'
+import UpwardLogo from '../components/UpwardLogo'
+import { useTheme } from '../context/ThemeContext'
 
 interface Props {
   onLogin: (email: string, password: string) => Promise<void>
@@ -38,6 +40,8 @@ export default function Login({ onLogin, onRegister, onSocialLogin }: Props) {
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false)
   const [selectedLanguage, setSelectedLanguage] = useState('English (India)')
   const navigate = useNavigate()
+  const { theme, toggleTheme } = useTheme()
+  const isDark = theme === 'dark'
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -66,7 +70,6 @@ export default function Login({ onLogin, onRegister, onSocialLogin }: Props) {
       if (onSocialLogin) {
         await onSocialLogin(provider)
       } else {
-        // Fallback demo login
         await onLogin('trader@example.com', 'Password123!')
       }
       navigate('/')
@@ -86,37 +89,74 @@ export default function Login({ onLogin, onRegister, onSocialLogin }: Props) {
   }
 
   return (
-    <div className="h-screen w-full flex flex-col md:flex-row overflow-hidden bg-[#0a0d14] text-gray-100 font-sans">
+    <div
+      className={`h-screen w-full flex flex-col md:flex-row overflow-hidden transition-colors duration-200 font-sans ${
+        isDark ? 'bg-[#090d14] text-gray-100' : 'bg-slate-50 text-slate-900'
+      }`}
+    >
       {/* ── LEFT SIDE: FULL-SCREEN FIXED STOCK GRAPH CANVAS ── */}
       <div className="hidden md:flex flex-1 h-full relative overflow-hidden bg-[#07090e]">
         <InteractiveStockCanvas />
       </div>
 
-      {/* ── RIGHT SIDE: DOCKED AUTHENTICATION BOX (MATCHING SCREENSHOT) ── */}
-      <div className="w-full md:w-[460px] lg:w-[490px] h-full flex flex-col justify-between px-6 py-6 sm:px-10 sm:py-8 bg-[#0c0f17] border-l border-[#1a202c] z-20 overflow-y-auto">
+      {/* ── RIGHT SIDE: DOCKED AUTHENTICATION BOX (MATCHING SCREENSHOT & LOGO THEME) ── */}
+      <div
+        className={`w-full md:w-[460px] lg:w-[490px] h-full flex flex-col justify-between px-6 py-6 sm:px-10 sm:py-8 border-l transition-colors z-20 overflow-y-auto ${
+          isDark
+            ? 'bg-[#0c0f17] border-[#1a202c]'
+            : 'bg-white border-slate-200 shadow-2xl'
+        }`}
+      >
         <div>
+          {/* Brand Header */}
+          <div className="flex items-center justify-between mb-4">
+            <UpwardLogo size="md" variant="full" />
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className={`p-2 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                isDark
+                  ? 'bg-slate-900 text-slate-300 border-slate-800 hover:bg-slate-800'
+                  : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+              }`}
+              title={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
+            >
+              {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
+            </button>
+          </div>
+
           {/* Top Header: Language Selector on Left, Login/Register pills on Right */}
-          <div className="flex items-center justify-between pb-6 mb-2">
+          <div className="flex items-center justify-between pb-4 mb-2 border-b border-slate-200 dark:border-slate-800/80">
             {/* Language dropdown */}
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setLanguageMenuOpen((prev) => !prev)}
-                className="flex items-center gap-2 text-sm text-gray-200 hover:text-white transition-colors py-1 focus:outline-none"
+                className={`flex items-center gap-2 text-xs sm:text-sm transition-colors py-1 focus:outline-none ${
+                  isDark ? 'text-gray-200 hover:text-white' : 'text-slate-700 hover:text-slate-900'
+                }`}
               >
                 <span className="text-base">🇮🇳</span>
-                <span className="font-medium text-xs sm:text-sm">{selectedLanguage}</span>
+                <span className="font-semibold">{selectedLanguage}</span>
               </button>
 
               {languageMenuOpen && (
-                <div className="absolute top-full left-0 mt-1.5 w-44 bg-[#141824] border border-[#232a3b] rounded-xl shadow-2xl py-1 z-30">
+                <div
+                  className={`absolute top-full left-0 mt-1.5 w-44 rounded-xl shadow-2xl py-1 z-30 border ${
+                    isDark
+                      ? 'bg-[#141824] border-[#232a3b]'
+                      : 'bg-white border-slate-200'
+                  }`}
+                >
                   <button
                     type="button"
                     onClick={() => {
                       setSelectedLanguage('English (India)')
                       setLanguageMenuOpen(false)
                     }}
-                    className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-[#1e2538] hover:text-white flex items-center gap-2"
+                    className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2 ${
+                      isDark ? 'text-gray-300 hover:bg-[#1e2538] hover:text-white' : 'text-slate-700 hover:bg-slate-100'
+                    }`}
                   >
                     <span>🇮🇳</span> English (India)
                   </button>
@@ -126,7 +166,9 @@ export default function Login({ onLogin, onRegister, onSocialLogin }: Props) {
                       setSelectedLanguage('English (US)')
                       setLanguageMenuOpen(false)
                     }}
-                    className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-[#1e2538] hover:text-white flex items-center gap-2"
+                    className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2 ${
+                      isDark ? 'text-gray-300 hover:bg-[#1e2538] hover:text-white' : 'text-slate-700 hover:bg-slate-100'
+                    }`}
                   >
                     <span>🇺🇸</span> English (US)
                   </button>
@@ -136,7 +178,9 @@ export default function Login({ onLogin, onRegister, onSocialLogin }: Props) {
                       setSelectedLanguage('English (UK)')
                       setLanguageMenuOpen(false)
                     }}
-                    className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-[#1e2538] hover:text-white flex items-center gap-2"
+                    className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2 ${
+                      isDark ? 'text-gray-300 hover:bg-[#1e2538] hover:text-white' : 'text-slate-700 hover:bg-slate-100'
+                    }`}
                   >
                     <span>🇬🇧</span> English (UK)
                   </button>
@@ -145,14 +189,18 @@ export default function Login({ onLogin, onRegister, onSocialLogin }: Props) {
             </div>
 
             {/* Login / Register Toggle Pills */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setMode('login')}
                 className={`px-4 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition-all ${
                   mode === 'login'
-                    ? 'border border-gray-400 bg-black/70 text-white shadow-sm'
-                    : 'border border-gray-700/80 bg-[#121622] text-gray-400 hover:text-white hover:border-gray-600'
+                    ? isDark
+                      ? 'border border-gray-400 bg-black/80 text-white shadow-sm'
+                      : 'border border-slate-800 bg-slate-900 text-white shadow-sm'
+                    : isDark
+                    ? 'border border-gray-700/80 bg-[#121622] text-gray-400 hover:text-white'
+                    : 'border border-slate-200 bg-slate-100 text-slate-600 hover:text-slate-900'
                 }`}
               >
                 Login
@@ -162,8 +210,12 @@ export default function Login({ onLogin, onRegister, onSocialLogin }: Props) {
                 onClick={() => setMode('register')}
                 className={`px-4 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition-all ${
                   mode === 'register'
-                    ? 'border border-gray-400 bg-black/70 text-white shadow-sm'
-                    : 'border border-gray-700/80 bg-[#121622] text-gray-400 hover:text-white hover:border-gray-600'
+                    ? isDark
+                      ? 'border border-gray-400 bg-black/80 text-white shadow-sm'
+                      : 'border border-slate-800 bg-slate-900 text-white shadow-sm'
+                    : isDark
+                    ? 'border border-gray-700/80 bg-[#121622] text-gray-400 hover:text-white'
+                    : 'border border-slate-200 bg-slate-100 text-slate-600 hover:text-slate-900'
                 }`}
               >
                 Register
@@ -172,10 +224,14 @@ export default function Login({ onLogin, onRegister, onSocialLogin }: Props) {
           </div>
 
           {/* Form Card */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3.5 mt-4">
             {mode === 'register' && (
               <div>
-                <label className="block text-xs sm:text-sm text-gray-300 font-medium mb-1.5">
+                <label
+                  className={`block text-xs sm:text-sm font-medium mb-1.5 ${
+                    isDark ? 'text-gray-300' : 'text-slate-700'
+                  }`}
+                >
                   Full name
                 </label>
                 <input
@@ -183,14 +239,22 @@ export default function Login({ onLogin, onRegister, onSocialLogin }: Props) {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder=""
-                  className="w-full bg-[#121622] border border-[#232a3b] rounded-lg px-3.5 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                  className={`w-full rounded-lg px-3.5 py-2.5 text-sm transition-all focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 border ${
+                    isDark
+                      ? 'bg-[#121622] border-[#232a3b] text-white placeholder-gray-500'
+                      : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400'
+                  }`}
                   required
                 />
               </div>
             )}
 
             <div>
-              <label className="block text-xs sm:text-sm text-gray-300 font-medium mb-1.5">
+              <label
+                className={`block text-xs sm:text-sm font-medium mb-1.5 ${
+                  isDark ? 'text-gray-300' : 'text-slate-700'
+                }`}
+              >
                 Email
               </label>
               <input
@@ -198,23 +262,31 @@ export default function Login({ onLogin, onRegister, onSocialLogin }: Props) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder=""
-                className="w-full bg-[#121622] border border-[#232a3b] rounded-lg px-3.5 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                className={`w-full rounded-lg px-3.5 py-2.5 text-sm transition-all focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 border ${
+                  isDark
+                    ? 'bg-[#121622] border-[#232a3b] text-white placeholder-gray-500'
+                    : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400'
+                }`}
                 required
               />
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs sm:text-sm text-gray-300 font-medium">
+                <label
+                  className={`block text-xs sm:text-sm font-medium ${
+                    isDark ? 'text-gray-300' : 'text-slate-700'
+                  }`}
+                >
                   {mode === 'register' ? 'Create a password' : 'Password'}
                 </label>
                 {mode === 'login' && (
                   <button
                     type="button"
                     onClick={handleFillDemo}
-                    className="text-[11px] text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-medium transition-colors"
+                    className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 font-semibold transition-colors"
                   >
-                    <Zap className="w-3 h-3" /> Demo Trader Fill
+                    <Zap className="w-3 h-3 text-amber-500" /> Demo Trader Fill
                   </button>
                 )}
               </div>
@@ -225,13 +297,17 @@ export default function Login({ onLogin, onRegister, onSocialLogin }: Props) {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder=""
                   minLength={6}
-                  className="w-full bg-[#121622] border border-[#232a3b] rounded-lg pl-3.5 pr-10 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                  className={`w-full rounded-lg pl-3.5 pr-10 py-2.5 text-sm transition-all focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 border ${
+                    isDark
+                      ? 'bg-[#121622] border-[#232a3b] text-white placeholder-gray-500'
+                      : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400'
+                  }`}
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 focus:outline-none transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 dark:hover:text-gray-200 focus:outline-none transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -240,14 +316,30 @@ export default function Login({ onLogin, onRegister, onSocialLogin }: Props) {
 
             {mode === 'register' && (
               <div>
-                <label className="block text-xs sm:text-sm text-gray-300 font-medium mb-1.5">
+                <label
+                  className={`block text-xs sm:text-sm font-medium mb-1.5 ${
+                    isDark ? 'text-gray-300' : 'text-slate-700'
+                  }`}
+                >
                   Phone
                 </label>
-                <div className="flex rounded-lg overflow-hidden border border-[#232a3b] bg-[#121622] focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
+                <div
+                  className={`flex rounded-lg overflow-hidden border transition-all focus-within:ring-1 focus-within:ring-emerald-500 focus-within:border-emerald-500 ${
+                    isDark
+                      ? 'border-[#232a3b] bg-[#121622]'
+                      : 'border-slate-300 bg-slate-50'
+                  }`}
+                >
                   {/* Country Flag & Dial Selector */}
-                  <div className="flex items-center gap-1.5 px-3 py-2.5 bg-[#161b2a] border-r border-[#232a3b] text-xs sm:text-sm text-gray-200 cursor-pointer select-none">
+                  <div
+                    className={`flex items-center gap-1.5 px-3 py-2.5 border-r text-xs sm:text-sm cursor-pointer select-none ${
+                      isDark
+                        ? 'bg-[#161b2a] border-[#232a3b] text-gray-200'
+                        : 'bg-slate-100 border-slate-300 text-slate-800'
+                    }`}
+                  >
                     <span className="text-base">{selectedCountry.flag}</span>
-                    <span className="font-medium">{selectedCountry.dial}</span>
+                    <span className="font-semibold">{selectedCountry.dial}</span>
                     <select
                       value={selectedCountry.code}
                       onChange={(e) => {
@@ -271,23 +363,25 @@ export default function Login({ onLogin, onRegister, onSocialLogin }: Props) {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder=""
-                    className="flex-1 bg-transparent px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none"
+                    className={`flex-1 bg-transparent px-3 py-2.5 text-sm focus:outline-none ${
+                      isDark ? 'text-white placeholder-gray-600' : 'text-slate-900 placeholder-slate-400'
+                    }`}
                   />
                 </div>
               </div>
             )}
 
             {error && (
-              <div className="text-xs text-rose-300 bg-rose-950/40 border border-rose-800/50 rounded-lg px-3 py-2">
+              <div className="text-xs text-rose-500 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/50 rounded-lg px-3 py-2">
                 {error}
               </div>
             )}
 
-            {/* Primary Action Button (Vibrant Blue 'Start Now') */}
+            {/* Primary Action Button (Upward Financial Arrow Green) */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 py-3 px-4 rounded-lg bg-[#0088ff] hover:bg-[#0077ee] text-white font-bold text-sm tracking-wide shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              className="w-full mt-2 py-3 px-4 rounded-lg bg-[#059669] hover:bg-[#047857] text-white font-bold text-sm tracking-wide shadow-lg shadow-emerald-700/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               {mode === 'register' ? 'Start Now' : 'Sign In'}
@@ -295,9 +389,13 @@ export default function Login({ onLogin, onRegister, onSocialLogin }: Props) {
           </form>
 
           {/* Privacy Disclaimer */}
-          <div className="mt-4 text-xs text-gray-400 leading-relaxed">
+          <div
+            className={`mt-3.5 text-xs leading-relaxed ${
+              isDark ? 'text-gray-400' : 'text-slate-500'
+            }`}
+          >
             By submitting your information, you agree to our{' '}
-            <a href="#privacy" className="text-[#0088ff] hover:underline">
+            <a href="#privacy" className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline">
               Privacy Policy
             </a>
           </div>
@@ -308,25 +406,39 @@ export default function Login({ onLogin, onRegister, onSocialLogin }: Props) {
               type="button"
               onClick={() => setAgreeTerms((prev) => !prev)}
               className={`w-4 h-4 mt-0.5 rounded flex items-center justify-center transition-colors ${
-                agreeTerms ? 'bg-[#0088ff] text-white' : 'border border-gray-600 bg-transparent'
+                agreeTerms
+                  ? 'bg-[#059669] text-white'
+                  : isDark
+                  ? 'border border-gray-600 bg-transparent'
+                  : 'border border-slate-300 bg-transparent'
               }`}
             >
               {agreeTerms && <Check className="w-3 h-3 stroke-[3]" />}
             </button>
             <label
               onClick={() => setAgreeTerms((prev) => !prev)}
-              className="text-xs text-gray-300 cursor-pointer select-none leading-snug"
+              className={`text-xs cursor-pointer select-none leading-snug ${
+                isDark ? 'text-gray-300' : 'text-slate-700'
+              }`}
             >
-              I agree to receive electronic communications from StockResearch AI
+              I agree to receive electronic communications from Upward Financial
             </label>
           </div>
 
           {/* Divider */}
-          <div className="relative my-6 flex items-center justify-center">
+          <div className="relative my-5 flex items-center justify-center">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-[#1c2333]" />
+              <div
+                className={`w-full border-t ${
+                  isDark ? 'border-[#1c2333]' : 'border-slate-200'
+                }`}
+              />
             </div>
-            <span className="relative px-3 bg-[#0c0f17] text-xs text-gray-400">
+            <span
+              className={`relative px-3 text-xs ${
+                isDark ? 'bg-[#0c0f17] text-gray-400' : 'bg-white text-slate-500'
+              }`}
+            >
               {mode === 'register' ? 'Or register with' : 'Or login with'}
             </span>
           </div>
@@ -337,7 +449,11 @@ export default function Login({ onLogin, onRegister, onSocialLogin }: Props) {
             <button
               type="button"
               onClick={() => handleSocial('google')}
-              className="w-11 h-11 rounded-full bg-[#141926] border border-[#232a3b] hover:border-gray-500 hover:bg-[#1c2336] flex items-center justify-center shadow-md transition-all group"
+              className={`w-11 h-11 rounded-full border flex items-center justify-center shadow-sm transition-all group ${
+                isDark
+                  ? 'bg-[#141926] border-[#232a3b] hover:border-gray-500 hover:bg-[#1c2336]'
+                  : 'bg-slate-50 border-slate-200 hover:border-slate-400 hover:bg-slate-100'
+              }`}
               title="Sign in with Google"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -364,7 +480,11 @@ export default function Login({ onLogin, onRegister, onSocialLogin }: Props) {
             <button
               type="button"
               onClick={() => handleSocial('facebook')}
-              className="w-11 h-11 rounded-full bg-[#141926] border border-[#232a3b] hover:border-gray-500 hover:bg-[#1c2336] flex items-center justify-center shadow-md transition-all group"
+              className={`w-11 h-11 rounded-full border flex items-center justify-center shadow-sm transition-all group ${
+                isDark
+                  ? 'bg-[#141926] border-[#232a3b] hover:border-gray-500 hover:bg-[#1c2336]'
+                  : 'bg-slate-50 border-slate-200 hover:border-slate-400 hover:bg-slate-100'
+              }`}
               title="Sign in with Facebook"
             >
               <svg className="w-5 h-5 fill-[#1877F2]" viewBox="0 0 24 24">
@@ -376,10 +496,17 @@ export default function Login({ onLogin, onRegister, onSocialLogin }: Props) {
             <button
               type="button"
               onClick={() => handleSocial('apple')}
-              className="w-11 h-11 rounded-full bg-[#141926] border border-[#232a3b] hover:border-gray-500 hover:bg-[#1c2336] flex items-center justify-center shadow-md transition-all group"
+              className={`w-11 h-11 rounded-full border flex items-center justify-center shadow-sm transition-all group ${
+                isDark
+                  ? 'bg-[#141926] border-[#232a3b] hover:border-gray-500 hover:bg-[#1c2336]'
+                  : 'bg-slate-50 border-slate-200 hover:border-slate-400 hover:bg-slate-100'
+              }`}
               title="Sign in with Apple"
             >
-              <svg className="w-5 h-5 fill-white" viewBox="0 0 24 24">
+              <svg
+                className={`w-5 h-5 ${isDark ? 'fill-white' : 'fill-slate-900'}`}
+                viewBox="0 0 24 24"
+              >
                 <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.62-.75 1.04-1.8 1.01-2.87-.96.04-2.13.65-2.79 1.41-.58.66-1.09 1.73-.97 2.76 1.07.08 2.13-.55 2.75-1.3" />
               </svg>
             </button>
@@ -387,8 +514,12 @@ export default function Login({ onLogin, onRegister, onSocialLogin }: Props) {
         </div>
 
         {/* Footer info */}
-        <div className="pt-4 text-center text-[11px] text-gray-500 border-t border-[#1a202c] mt-4">
-          StockResearch AI · Multi-Agent Capital Intelligence
+        <div
+          className={`pt-4 text-center text-[11px] border-t mt-4 ${
+            isDark ? 'text-gray-500 border-[#1a202c]' : 'text-slate-400 border-slate-200'
+          }`}
+        >
+          Upward Financial · Institutional Multi-Agent Intelligence
         </div>
       </div>
     </div>

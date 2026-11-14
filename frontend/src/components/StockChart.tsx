@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react'
 import Plot from 'react-plotly.js'
 import clsx from 'clsx'
 import type { OHLCVPoint } from '../types'
+import { useTheme } from '../context/ThemeContext'
 
 interface SMAData {
   sma20?: (number | null)[]
@@ -28,6 +29,8 @@ export default function StockChart({ data, ticker, market, height = 420, sma }: 
   const [showSMA50, setShowSMA50] = useState(false)
   const [showVWAP, setShowVWAP] = useState(false)
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
 
   const currencySymbol = market === 'US' ? '$' : '₹'
 
@@ -354,37 +357,37 @@ export default function StockChart({ data, ticker, market, height = 420, sma }: 
   const layout: Partial<Plotly.Layout> = {
     paper_bgcolor: 'transparent',
     plot_bgcolor: 'transparent',
-    font: { color: '#94a3b8', size: 11, family: 'Inter, system-ui, sans-serif' },
+    font: { color: isDark ? '#94a3b8' : '#475569', size: 11, family: 'Inter, system-ui, sans-serif' },
     xaxis: {
       type: 'date',
-      gridcolor: '#1e293b',
-      linecolor: '#334155',
+      gridcolor: isDark ? '#1e293b' : '#e2e8f0',
+      linecolor: isDark ? '#334155' : '#cbd5e1',
       rangeslider: { visible: false },
-      tickfont: { color: '#94a3b8', size: 10 },
+      tickfont: { color: isDark ? '#94a3b8' : '#64748b', size: 10 },
     },
     yaxis: {
-      gridcolor: '#1e293b',
-      linecolor: '#334155',
+      gridcolor: isDark ? '#1e293b' : '#e2e8f0',
+      linecolor: isDark ? '#334155' : '#cbd5e1',
       title: {
         text: market === 'US' ? 'Price (USD $)' : 'Price (INR ₹)',
-        font: { color: '#94a3b8', size: 11 },
+        font: { color: isDark ? '#94a3b8' : '#475569', size: 11 },
       },
       domain: [0.22, 1],
-      tickfont: { color: '#94a3b8', size: 10 },
+      tickfont: { color: isDark ? '#94a3b8' : '#64748b', size: 10 },
       tickformat: ',.2f',
     },
     yaxis2: {
-      gridcolor: '#1e293b',
-      linecolor: '#334155',
-      title: { text: 'Volume', font: { color: '#64748b', size: 10 } },
+      gridcolor: isDark ? '#1e293b' : '#e2e8f0',
+      linecolor: isDark ? '#334155' : '#cbd5e1',
+      title: { text: 'Volume', font: { color: isDark ? '#64748b' : '#94a3b8', size: 10 } },
       domain: [0, 0.18],
-      tickfont: { color: '#64748b', size: 9 },
+      tickfont: { color: isDark ? '#64748b' : '#94a3b8', size: 9 },
     },
     legend: {
       orientation: 'h',
       x: 0,
       y: -0.15,
-      font: { color: '#94a3b8', size: 11 },
+      font: { color: isDark ? '#94a3b8' : '#475569', size: 11 },
       bgcolor: 'transparent',
     },
     margin: { l: 55, r: 25, t: 15, b: 35 },
@@ -405,14 +408,38 @@ export default function StockChart({ data, ticker, market, height = 420, sma }: 
   const activeIsBullish = activeDiff >= 0
 
   return (
-    <div className="flex flex-col w-full bg-gray-900/40 rounded-xl border border-gray-800/80 overflow-hidden shadow-lg backdrop-blur-sm">
+    <div
+      className={clsx(
+        'flex flex-col w-full rounded-xl border overflow-hidden shadow-lg backdrop-blur-sm transition-colors',
+        isDark
+          ? 'bg-gray-900/40 border-gray-800/80'
+          : 'bg-white border-slate-200'
+      )}
+    >
       {/* ── TOP INTERACTIVE DATA HUD (HEADS-UP DISPLAY) ── */}
-      <div className="flex flex-wrap items-center justify-between px-4 py-2.5 bg-gray-900/90 border-b border-gray-800 gap-3">
+      <div
+        className={clsx(
+          'flex flex-wrap items-center justify-between px-4 py-2.5 border-b gap-3 transition-colors',
+          isDark ? 'bg-gray-900/90 border-gray-800' : 'bg-slate-50 border-slate-200'
+        )}
+      >
         {/* Left: Live Price & Dynamics */}
         <div className="flex items-center gap-3">
           <div className="flex items-baseline gap-1.5">
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{ticker}</span>
-            <span className="text-xl font-bold text-white tracking-tight">
+            <span
+              className={clsx(
+                'text-xs font-semibold uppercase tracking-wider',
+                isDark ? 'text-gray-400' : 'text-slate-500'
+              )}
+            >
+              {ticker}
+            </span>
+            <span
+              className={clsx(
+                'text-xl font-bold tracking-tight',
+                isDark ? 'text-white' : 'text-slate-900'
+              )}
+            >
               {currencySymbol}{activePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
@@ -421,8 +448,12 @@ export default function StockChart({ data, ticker, market, height = 420, sma }: 
             className={clsx(
               'flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold transition-colors',
               activeIsBullish
-                ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/30'
-                : 'bg-rose-950/80 text-rose-400 border border-rose-500/30'
+                ? isDark
+                  ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/30'
+                  : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                : isDark
+                ? 'bg-rose-950/80 text-rose-400 border border-rose-500/30'
+                : 'bg-rose-100 text-rose-800 border border-rose-300'
             )}
           >
             <span>{activeIsBullish ? '▲ +' : '▼ '}</span>
@@ -431,7 +462,12 @@ export default function StockChart({ data, ticker, market, height = 420, sma }: 
           </div>
 
           {activePoint && (
-            <span className="text-[11px] text-gray-500 hidden sm:inline-block">
+            <span
+              className={clsx(
+                'text-[11px] hidden sm:inline-block',
+                isDark ? 'text-gray-500' : 'text-slate-400'
+              )}
+            >
               {new Date(activePoint.date).toLocaleString(undefined, {
                 month: 'short',
                 day: 'numeric',
@@ -444,22 +480,27 @@ export default function StockChart({ data, ticker, market, height = 420, sma }: 
 
         {/* Right: Key Session Range (O / H / L / V) */}
         {activePoint && (
-          <div className="flex items-center gap-3 text-[11px] text-gray-400">
+          <div
+            className={clsx(
+              'flex items-center gap-3 text-[11px]',
+              isDark ? 'text-gray-400' : 'text-slate-600'
+            )}
+          >
             <div>
-              <span className="text-gray-500 font-medium">O: </span>
-              <span className="font-semibold text-gray-300">{currencySymbol}{activePoint.open.toFixed(2)}</span>
+              <span className={isDark ? 'text-gray-500 font-medium' : 'text-slate-400 font-medium'}>O: </span>
+              <span className={clsx('font-semibold', isDark ? 'text-gray-300' : 'text-slate-800')}>{currencySymbol}{activePoint.open.toFixed(2)}</span>
             </div>
             <div>
-              <span className="text-gray-500 font-medium">H: </span>
-              <span className="font-semibold text-emerald-400">{currencySymbol}{activePoint.high.toFixed(2)}</span>
+              <span className={isDark ? 'text-gray-500 font-medium' : 'text-slate-400 font-medium'}>H: </span>
+              <span className="font-semibold text-emerald-500">{currencySymbol}{activePoint.high.toFixed(2)}</span>
             </div>
             <div>
-              <span className="text-gray-500 font-medium">L: </span>
-              <span className="font-semibold text-rose-400">{currencySymbol}{activePoint.low.toFixed(2)}</span>
+              <span className={isDark ? 'text-gray-500 font-medium' : 'text-slate-400 font-medium'}>L: </span>
+              <span className="font-semibold text-rose-500">{currencySymbol}{activePoint.low.toFixed(2)}</span>
             </div>
             <div>
-              <span className="text-gray-500 font-medium">Vol: </span>
-              <span className="font-semibold text-blue-400">
+              <span className={isDark ? 'text-gray-500 font-medium' : 'text-slate-400 font-medium'}>Vol: </span>
+              <span className="font-semibold text-blue-500">
                 {activePoint.volume >= 1e6
                   ? `${(activePoint.volume / 1e6).toFixed(2)}M`
                   : activePoint.volume >= 1e3
@@ -472,17 +513,29 @@ export default function StockChart({ data, ticker, market, height = 420, sma }: 
       </div>
 
       {/* ── TOOLBAR: CHART TYPE & DATA REPRESENTATION CONTROLS ── */}
-      <div className="flex flex-wrap items-center justify-between px-4 py-1.5 bg-gray-950/70 border-b border-gray-800/60 gap-2 text-xs">
+      <div
+        className={clsx(
+          'flex flex-wrap items-center justify-between px-4 py-1.5 border-b gap-2 text-xs transition-colors',
+          isDark ? 'bg-gray-950/70 border-gray-800/60' : 'bg-slate-100/70 border-slate-200'
+        )}
+      >
         {/* Chart View Switcher */}
-        <div className="flex items-center gap-1 bg-gray-900 p-0.5 rounded-lg border border-gray-800">
+        <div
+          className={clsx(
+            'flex items-center gap-1 p-0.5 rounded-lg border',
+            isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-slate-200'
+          )}
+        >
           <button
             type="button"
             onClick={() => setChartType('line')}
             className={clsx(
               'px-2.5 py-1 rounded-md font-semibold transition-all flex items-center gap-1.5',
               chartType === 'line'
-                ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
-                : 'text-gray-400 hover:text-white'
+                ? 'bg-[#059669] text-white shadow-sm shadow-emerald-700/30'
+                : isDark
+                ? 'text-gray-400 hover:text-white'
+                : 'text-slate-600 hover:text-slate-900'
             )}
           >
             <span>📈</span> Line & Area
@@ -493,8 +546,10 @@ export default function StockChart({ data, ticker, market, height = 420, sma }: 
             className={clsx(
               'px-2.5 py-1 rounded-md font-semibold transition-all flex items-center gap-1.5',
               chartType === 'candle'
-                ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
-                : 'text-gray-400 hover:text-white'
+                ? 'bg-[#059669] text-white shadow-sm shadow-emerald-700/30'
+                : isDark
+                ? 'text-gray-400 hover:text-white'
+                : 'text-slate-600 hover:text-slate-900'
             )}
           >
             <span>📊</span> Candlestick
@@ -503,8 +558,13 @@ export default function StockChart({ data, ticker, market, height = 420, sma }: 
 
         {/* Visual Line Styles (Visible in Line Mode) */}
         {chartType === 'line' && (
-          <div className="flex items-center gap-1 bg-gray-900/80 p-0.5 rounded-lg border border-gray-800">
-            <span className="text-[10px] text-gray-500 font-semibold px-1.5 uppercase">Style:</span>
+          <div
+            className={clsx(
+              'flex items-center gap-1 p-0.5 rounded-lg border',
+              isDark ? 'bg-gray-900/80 border-gray-800' : 'bg-white border-slate-200'
+            )}
+          >
+            <span className={clsx('text-[10px] font-semibold px-1.5 uppercase', isDark ? 'text-gray-500' : 'text-slate-400')}>Style:</span>
             {(
               [
                 { id: 'area', label: 'Area Glow' },
@@ -520,8 +580,12 @@ export default function StockChart({ data, ticker, market, height = 420, sma }: 
                 className={clsx(
                   'px-2 py-0.5 rounded text-[11px] font-medium transition-all',
                   lineStyle === st.id
-                    ? 'bg-gray-800 text-cyan-300 font-semibold border border-cyan-500/30'
-                    : 'text-gray-400 hover:text-gray-200'
+                    ? isDark
+                      ? 'bg-gray-800 text-emerald-400 font-semibold border border-emerald-500/30'
+                      : 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-300'
+                    : isDark
+                    ? 'text-gray-400 hover:text-gray-200'
+                    : 'text-slate-600 hover:text-slate-900'
                 )}
               >
                 {st.label}
@@ -538,8 +602,12 @@ export default function StockChart({ data, ticker, market, height = 420, sma }: 
             className={clsx(
               'px-2 py-0.5 rounded text-[11px] font-medium transition-all border',
               showHighLow
-                ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40'
-                : 'bg-gray-900 text-gray-400 border-gray-800 hover:text-gray-200'
+                ? isDark
+                  ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40'
+                  : 'bg-emerald-100 text-emerald-800 border-emerald-300 font-semibold'
+                : isDark
+                ? 'bg-gray-900 text-gray-400 border-gray-800 hover:text-gray-200'
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
             )}
             title="Display peak period High and trough Low markers with callouts"
           >
@@ -552,8 +620,12 @@ export default function StockChart({ data, ticker, market, height = 420, sma }: 
             className={clsx(
               'px-2 py-0.5 rounded text-[11px] font-medium transition-all border',
               showBollinger
-                ? 'bg-sky-950/60 text-sky-300 border-sky-500/40'
-                : 'bg-gray-900 text-gray-400 border-gray-800 hover:text-gray-200'
+                ? isDark
+                  ? 'bg-sky-950/60 text-sky-300 border-sky-500/40'
+                  : 'bg-sky-100 text-sky-800 border-sky-300 font-semibold'
+                : isDark
+                ? 'bg-gray-900 text-gray-400 border-gray-800 hover:text-gray-200'
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
             )}
             title="Bollinger Bands (20, 2σ) volatility envelope"
           >
@@ -566,8 +638,12 @@ export default function StockChart({ data, ticker, market, height = 420, sma }: 
             className={clsx(
               'px-2 py-0.5 rounded text-[11px] font-medium transition-all border',
               showSMA20
-                ? 'bg-amber-950/60 text-amber-300 border-amber-500/40'
-                : 'bg-gray-900 text-gray-400 border-gray-800 hover:text-gray-200'
+                ? isDark
+                  ? 'bg-amber-950/60 text-amber-300 border-amber-500/40'
+                  : 'bg-amber-100 text-amber-800 border-amber-300 font-semibold'
+                : isDark
+                ? 'bg-gray-900 text-gray-400 border-gray-800 hover:text-gray-200'
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
             )}
             title="20-period Simple Moving Average"
           >
@@ -580,8 +656,12 @@ export default function StockChart({ data, ticker, market, height = 420, sma }: 
             className={clsx(
               'px-2 py-0.5 rounded text-[11px] font-medium transition-all border',
               showSMA50
-                ? 'bg-purple-950/60 text-purple-300 border-purple-500/40'
-                : 'bg-gray-900 text-gray-400 border-gray-800 hover:text-gray-200'
+                ? isDark
+                  ? 'bg-purple-950/60 text-purple-300 border-purple-500/40'
+                  : 'bg-purple-100 text-purple-800 border-purple-300 font-semibold'
+                : isDark
+                ? 'bg-gray-900 text-gray-400 border-gray-800 hover:text-gray-200'
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
             )}
             title="50-period Simple Moving Average"
           >
@@ -594,8 +674,12 @@ export default function StockChart({ data, ticker, market, height = 420, sma }: 
             className={clsx(
               'px-2 py-0.5 rounded text-[11px] font-medium transition-all border',
               showVWAP
-                ? 'bg-cyan-950/60 text-cyan-300 border-cyan-500/40'
-                : 'bg-gray-900 text-gray-400 border-gray-800 hover:text-gray-200'
+                ? isDark
+                  ? 'bg-cyan-950/60 text-cyan-300 border-cyan-500/40'
+                  : 'bg-cyan-100 text-cyan-800 border-cyan-300 font-semibold'
+                : isDark
+                ? 'bg-gray-900 text-gray-400 border-gray-800 hover:text-gray-200'
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
             )}
             title="Volume-Weighted Average Price benchmark"
           >
