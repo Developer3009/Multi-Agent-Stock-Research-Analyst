@@ -30,10 +30,12 @@ export default api
 
 // ── Auth ──────────────────────────────────────────────────────────────
 export const authAPI = {
-  register: (email: string, password: string) =>
-    api.post('/auth/register', { email, password }),
+  register: (email: string, password: string, full_name?: string, phone?: string) =>
+    api.post('/auth/register', { email, password, full_name, phone }),
   login: (email: string, password: string) =>
     api.post('/auth/login', { email, password }),
+  socialLogin: (provider: string, email?: string, full_name?: string) =>
+    api.post('/auth/social-login', { provider, email, full_name }),
   me: () => api.get('/auth/me'),
 }
 

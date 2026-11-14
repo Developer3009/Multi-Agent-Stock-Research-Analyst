@@ -8,7 +8,7 @@ import Navbar from './components/Navbar'
 import { Loader2 } from 'lucide-react'
 
 export default function App() {
-  const { user, loading, login, register, logout } = useAuth()
+  const { user, loading, login, register, socialLogin, logout } = useAuth()
 
   if (loading) {
     return (
@@ -25,7 +25,11 @@ export default function App() {
         <Route
           path="/login"
           element={
-            user ? <Navigate to="/" replace /> : <Login onLogin={login} onRegister={register} />
+            user ? (
+              <Navigate to="/" replace />
+            ) : (
+              <Login onLogin={login} onRegister={register} onSocialLogin={socialLogin} />
+            )
           }
         />
         <Route

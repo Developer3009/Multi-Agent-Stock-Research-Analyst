@@ -16,6 +16,7 @@ class User(Base):
     user_id = Column(String, primary_key=True, default=gen_uuid)
     email = Column(String, unique=True, nullable=False, index=True)
     full_name = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
     password_hash = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 

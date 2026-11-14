@@ -31,3 +31,9 @@ async def init_db():
     async with engine.begin() as conn:
         from app.models import db_models  # noqa: F401 — import to register models
         await conn.run_sync(Base.metadata.create_all)
+        # Automatic non-destructive schema migration for SQLite
+        try:
+            from sqlalchemy import text
+            await conn.execute(text("ALTER TABLE users ADD COLUMN phone TEXT;"))
+        except Exception:
+            pass

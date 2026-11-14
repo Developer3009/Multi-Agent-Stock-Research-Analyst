@@ -8,11 +8,19 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     full_name: Optional[str] = None
+    phone: Optional[str] = None
 
 
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+
+class SocialAuthRequest(BaseModel):
+    provider: str  # google, facebook, apple
+    email: Optional[EmailStr] = None
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
 
 
 class Token(BaseModel):
@@ -24,6 +32,7 @@ class UserOut(BaseModel):
     user_id: str
     email: str
     full_name: Optional[str] = None
+    phone: Optional[str] = None
     created_at: datetime
 
     class Config:
